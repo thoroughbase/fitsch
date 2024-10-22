@@ -1,0 +1,11 @@
+# fitsch
+
+A groceries website that aggregates product data from stores across a geographical area to aid in making informed consumer decisions.
+Currently based in and focused on Dublin, Ireland.
+
+Libraries:
+- [json (nlohmann)](https://github.com/nlohmann/json) - Install by creating directory `include` in the top level of the project and the placing single-include header file into it.
+- [lexbor (lexborisov)](https://github.com/lexbor/lexbor)
+- [MongoDB C++ driver](https://github.com/mongodb/mongo-cxx-driver)
+- [libcurl](https://curl.se/download.html)
+- [fmt (vitaut)](https://github.com/fmtlib/fmt)

@@ -1,0 +1,6 @@
+build/*
+include/*
+fitsch-webscraper
+config.json
+.DS_Store
+*/.DS_Store
