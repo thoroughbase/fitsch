@@ -32,7 +32,7 @@ Product SV_GetProductAtURL(const HTML& html)
         }
     }
 
-    Collection<Element> priceper = html.SearchClass("PdpUnitPrice", ELEMENT_BODY, true);
+    Collection<Element> priceper = html.SearchClass("PdpUnitPrice-", ELEMENT_BODY, true);
 
     if (!priceper.size()) result.price_per_unit = { Unit::Piece, result.item_price };
     else {
@@ -49,7 +49,7 @@ ProductList SV_Search(const string& query, CURL* curl, int depth)
     ProductList results(depth);
     results.reserve(depth > 0 ? depth : 30);
 
-    Collection<Element> item_listings, name_c, price_c, price_per_c;
+    Collection<Element> item_listings, name_c, price_c, price_per_c, image_c, url_c;
 
     int max_per_page = 30, skip = 0;
     int page_items;
@@ -74,8 +74,11 @@ ProductList SV_Search(const string& query, CURL* curl, int depth)
             html.SearchAttr(name_c, "data-testid", "ProductNameTestId", e, true);
             html.SearchClass(price_c, "ProductCardPrice-", e, true);
             html.SearchClass(price_per_c, "ProductCardPriceInfo", e, true);
+            html.SearchClass(image_c, "ProductCardImage-", e, true);
+            html.SearchClass(url_c, "ProductCardHiddenLink", e, true);
 
-            if (!name_c.size() || !price_c.size() || !price_per_c.size()) {
+            if (!name_c.size() || !price_c.size() || !price_per_c.size()
+             || !image_c.size() || !url_c.size()) {
                 Log(WARNING, "One or more details missing for product {} on page {}",
                     i, url);
                 continue;
@@ -99,6 +102,9 @@ ProductList SV_Search(const string& query, CURL* curl, int depth)
             product.item_price = price_c[0].FirstChild().Text();
             product.price_per_unit = price_per_c[0].FirstChild().Text();
             product.id = stores::SuperValu.prefix + str_id;
+            product.url = url_c[0].GetAttrValue("href");
+            product.image_url = image_c[0].GetAttrValue("src");
+            product.timestamp = std::time(nullptr);
 
             if (product.price_per_unit.first == Unit::None) {
                 product.price_per_unit.first = Unit::Piece;
