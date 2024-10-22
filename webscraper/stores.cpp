@@ -45,25 +45,25 @@ Product SV_GetProductAtURL(const HTML& html)
 
 ProductList SV_Search(const string& query, CURL* curl, int depth)
 {
-	string base_url = stores::SuperValu.homepage + "results?q=" + query;
-	ProductList results(depth);
-	results.reserve(depth > 0 ? depth : 30);
+    string base_url = stores::SuperValu.homepage + "results?q=" + query;
+    ProductList results(depth);
+    results.reserve(depth > 0 ? depth : 30);
 
-	Collection<Element> item_listings, name_c, price_c, price_per_c;
+    Collection<Element> item_listings, name_c, price_c, price_per_c;
 
-	int max_per_page = 30, skip = 0;
-	int page_items;
+    int max_per_page = 30, skip = 0;
+    int page_items;
 
-	HTML html;
+    HTML html;
 
-	do {
-		string url = base_url + "&skip=" + std::to_string(skip);
-		page_items = 0;
+    do {
+        string url = base_url + "&skip=" + std::to_string(skip);
+        page_items = 0;
 
-		html.ReadFromURL(curl, url);
+        html.ReadFromURL(curl, url);
 
-		html.SearchClass(item_listings, "ColListing", ELEMENT_BODY, true);
-		if (!(page_items = item_listings.size())) break;
+        html.SearchClass(item_listings, "ColListing", ELEMENT_BODY, true);
+        if (!(page_items = item_listings.size())) break;
 
         skip += max_per_page;
         int i = 0;
@@ -77,8 +77,8 @@ ProductList SV_Search(const string& query, CURL* curl, int depth)
 
             if (!name_c.size() || !price_c.size() || !price_per_c.size()) {
                 Log(WARNING, "One or more details missing for product {} on page {}",
-				    i, url);
-				continue;
+                    i, url);
+                continue;
             }
 
             Node node = name_c[0].FirstChild();
@@ -95,24 +95,24 @@ ProductList SV_Search(const string& query, CURL* curl, int depth)
             string str_id = name_c[0].GetAttrValue("data-testid");
             str_id = str_id.substr(0, str_id.find('-'));
 
-			product.name = namestr;
-			product.item_price = price_c[0].FirstChild().Text();
-			product.price_per_unit = price_per_c[0].FirstChild().Text();
-			product.id = stores::SuperValu.prefix + str_id;
+            product.name = namestr;
+            product.item_price = price_c[0].FirstChild().Text();
+            product.price_per_unit = price_per_c[0].FirstChild().Text();
+            product.id = stores::SuperValu.prefix + str_id;
 
-			if (product.price_per_unit.first == Unit::None) {
-				product.price_per_unit.first = Unit::Piece;
-				product.price_per_unit.second = product.item_price;
-			}
+            if (product.price_per_unit.first == Unit::None) {
+                product.price_per_unit.first = Unit::Piece;
+                product.price_per_unit.second = product.item_price;
+            }
 
-			results.emplace_back(product, QueryResultInfo { (int) results.size() });
+            results.emplace_back(product, QueryResultInfo { (int) results.size() });
 
-			if (results.size() >= depth) break;
+            if (results.size() >= depth) break;
 
-			++i;
-		}
+            ++i;
+        }
 
-		if (results.size() >= depth) break;
-	} while (page_items >= max_per_page);
+        if (results.size() >= depth) break;
+    } while (page_items >= max_per_page);
     return results;
 }

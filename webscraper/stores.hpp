@@ -10,12 +10,12 @@ using std::string;
 
 struct Store
 {
-	StoreID id;
-	string name, prefix, homepage;
-	Region region;
+    StoreID id;
+    string name, prefix, homepage;
+    Region region;
 
     std::function<ProductList(const string&, CURL*, int)> SearchProducts;
-	std::function<Product(const HTML&)> GetProductAtURL;
+    std::function<Product(const HTML&)> GetProductAtURL;
 };
 
 // See stores.md

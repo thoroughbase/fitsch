@@ -48,7 +48,7 @@ void PrintQuery(App* a, const std::vector<TaskResult>& results)
         return (a.first.price_per_unit.first == b.first.price_per_unit.first) ?
                 a.first.price_per_unit.second < b.first.price_per_unit.second :
                 a.first.item_price < b.first.item_price;
-	});
+    });
 
     string text = fmt::format("Results for query `{}`:\n================\n", querystr);
 
@@ -159,29 +159,29 @@ void TC_GetQueriesDB(TaskRunner* runner, const Task& t)
 
 App::App(string cfg_path)
 {
-	curl_global_init(CURL_GLOBAL_DEFAULT);
+    curl_global_init(CURL_GLOBAL_DEFAULT);
 
-	Log(INFO, "Starting Fitsch {}", VERSION);
+    Log(INFO, "Starting Fitsch {}", VERSION);
 
-	if (!(curl_version_info(CURLVERSION_NOW)->features & CURL_VERSION_THREADSAFE)) {
-		Log(SEVERE, "CURL NOT THREADSAFE!");
-		std::exit(1);
-	}
+    if (!(curl_version_info(CURLVERSION_NOW)->features & CURL_VERSION_THREADSAFE)) {
+        Log(SEVERE, "CURL NOT THREADSAFE!");
+        std::exit(1);
+    }
 
-	std::ifstream cfg_file(cfg_path);
+    std::ifstream cfg_file(cfg_path);
 
-	if (!cfg_file.is_open()) {
-		Log(SEVERE, "Failed to open `config.json`. Shutting down");
-		std::exit(1);
-	}
+    if (!cfg_file.is_open()) {
+        Log(SEVERE, "Failed to open `config.json`. Shutting down");
+        std::exit(1);
+    }
 
-	json config = json::parse(cfg_file);
-	cfg_file.close();
+    json config = json::parse(cfg_file);
+    cfg_file.close();
 
-	int max_conc = config["max_concurrent"];
-	string mongouri = config["mongodb_uri"];
+    int max_conc = config["max_concurrent"];
+    string mongouri = config["mongodb_uri"];
 
-	Log(INFO, "Max concurrent tasks = {}", max_conc);
+    Log(INFO, "Max concurrent tasks = {}", max_conc);
 
     delegator.AddRunners(this, max_conc);
     database.Connect({mongouri});
@@ -189,7 +189,7 @@ App::App(string cfg_path)
 
 App::~App()
 {
-	curl_global_cleanup();
+    curl_global_cleanup();
 }
 
 void App::AddStore(const Store* store) { stores.emplace(store->id, store); }

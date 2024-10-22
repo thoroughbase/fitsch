@@ -27,7 +27,7 @@ int main(int argc, char** argv)
 
 		size_t ss = 0;
 		while (ss != string::npos && str.size()) {
-			ss = str.find(",");
+		    ss = str.find(",");
 			string query = str.substr(0, ss);
 			if (!query.empty()) {
 				Log(INFO, "Running query {}", query);

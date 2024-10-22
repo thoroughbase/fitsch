@@ -36,5 +36,5 @@ string RetrievePage(CURL* curl, const string& url)
 
     free(error);
 
- 	return result;
+    return result;
 }

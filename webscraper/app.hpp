@@ -110,18 +110,18 @@ private:
 class App
 {
 public:
-	App(string cfg_path);
-	~App();
+    App(string cfg_path);
+    ~App();
 
     void AddStore(const Store* store);
-	const Store* GetStore(StoreID id);
+    const Store* GetStore(StoreID id);
 
-	void GetProductAtURL(StoreID store, const string& item_url);
-	void DoQuery(const StoreSelection& stores, const string& query, int depth=0);
+    void GetProductAtURL(StoreID store, const string& item_url);
+    void DoQuery(const StoreSelection& stores, const string& query, int depth=0);
 
-	Delegator delegator;
+    Delegator delegator;
     Database database;
 
 private:
-	std::map<StoreID, const Store*> stores;
+    std::map<StoreID, const Store*> stores;
 };

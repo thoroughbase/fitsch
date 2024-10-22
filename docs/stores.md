@@ -15,13 +15,13 @@ This is reflected in the definition of the `Product` struct:
 ```cpp
 struct Product
 {
-	string name, description, image_url, url, id;
-	Price item_price;
-	PricePU price_per_unit; // Price per KG, L, etc.
-	StoreID store;
-	std::time_t timestamp;
+    string name, description, image_url, url, id;
+    Price item_price;
+    PricePU price_per_unit; // Price per KG, L, etc.
+    StoreID store;
+    std::time_t timestamp;
 
-	bool full_info;
+    bool full_info;
 };
 ```
 
@@ -103,8 +103,13 @@ SuperValu by default displays up to 30 items per page. Each item is contained in
 *Extraneous information not pertinent to this document has been omitted using ellipses.*
 
 (1) The product URL is contained in an `<a>` element, a direct child of the `<article>` element.
-(2) The image URL is contained in an `<img>` element within the `<div>` of class `ProductCardImageWrapper`
+
+(2) The image URL is contained in an `<img>` element within the `<div>` of class `ProductCardImageWrapper`.
+
 (3) The product name is contained as a text element in the `<div>` whose attribute `data-testid` contains `ProductNameTestId`.
+
 (4) The product ID is contained in the value of the aforementioned attribute `data-testid` left of the hyphen.
+
 (5) The item price is contained in a `<span>` element of class `ProductCardPrice`.
+
 (6) The price per unit is contained in a `<span>` element of class `ProductCardPriceInfo`. This information may not be present for some items.
