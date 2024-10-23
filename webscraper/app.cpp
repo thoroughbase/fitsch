@@ -37,7 +37,11 @@ void PrintProduct(App* a, const std::vector<TaskResult>& results)
 void PrintQuery(App* a, const std::vector<TaskResult>& results)
 {
     ProductList list;
-    for (const auto& r : results) list.Add(r.value);
+    bool upload = false;
+    for (const auto& r : results) {
+        list.Add(r.value);
+        if (r.flags & RF_QUERIED_WEBSITE) upload = true;
+    }
 
     const TaskResult& tr = results[0];
     const string& querystr = tr.origin.args.str;
@@ -60,7 +64,7 @@ void PrintQuery(App* a, const std::vector<TaskResult>& results)
 
     fmt::print("{}", text);
 
-    if (tr.flags & RF_QUERIED_WEBSITE) { // Not purely from database
+    if (upload) { // Not purely from database
         Log(DEBUG, "Uploading query {}", querystr);
         auto qt = list.AsQueryTemplate(querystr, tr.origin.args.stores);
         a->database.PutQueryTemplates({qt});
