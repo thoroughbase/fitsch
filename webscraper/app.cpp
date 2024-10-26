@@ -278,7 +278,7 @@ void Delegator::AddRunners(App* a, int task_runners)
         runners.emplace_back(a);
 }
 
-unsigned Delegator::QueueTasks(const std::vector<Task>& tasks, const ResultCallback& c)
+unsigned Delegator::QueueTasks(const std::vector<Task>& tasks, ResultCallback c)
 {
     static unsigned groupid = 0;
 

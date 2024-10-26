@@ -14,8 +14,8 @@ struct Store
     string name, prefix, homepage;
     Region region;
 
-    std::function<ProductList(const string&, CURL*, int)> SearchProducts;
-    std::function<Product(const HTML&)> GetProductAtURL;
+    ProductList (*SearchProducts)(const string&, CURL*, int);
+    Product (*GetProductAtURL)(const HTML&);
 };
 
 // See stores.md

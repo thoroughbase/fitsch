@@ -26,8 +26,8 @@ struct TaskResult;
 using ResultFlags = int;
 inline const ResultFlags RF_QUERIED_WEBSITE = 0b01;
 
-using ResultCallback = std::function<void(App*, const std::vector<TaskResult>&)>;
-using TaskCallback = std::function<void(TaskRunner*, const Task&)>;
+using ResultCallback = void (*)(App*, const std::vector<TaskResult>&);
+using TaskCallback = void (*)(TaskRunner*, const Task&);
 
 struct TaskArgs
 {
@@ -71,7 +71,7 @@ private:
 
 struct ResultTuple
 {
-    ResultTuple(unsigned g, unsigned t, const ResultCallback& c,
+    ResultTuple(unsigned g, unsigned t, ResultCallback c,
                 const std::vector<TaskResult>& r)
         : groupid(g), taskno(t), cb(c), results(r) {}
     unsigned groupid, taskno;
@@ -89,7 +89,7 @@ public:
 
     // If `tasks` contains more than one task, all tasks will be queued together as a
     // subtasks. Returns the group id.
-    unsigned QueueTasks(const std::vector<Task>& tasks, const ResultCallback& c);
+    unsigned QueueTasks(const std::vector<Task>& tasks, ResultCallback c);
     void QueueExtraTasks(unsigned gid, const std::vector<Task>& tasks);
 
     // Signals that a runner is done with a task
