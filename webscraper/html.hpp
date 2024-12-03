@@ -22,20 +22,19 @@ struct DOMClass {};
 using std::string;
 
 // Concept CollectionCompatible for objects that can be inserted into Collection:
-// - Must implement Data() function which returns the underlying pointer
-// - Type must have static function member collection_access() which returns appropriate
-//   pointer
-// - Must be constructible from the pointer returned by the two above functions
-// - Must be derived from dummy struct DOMClass
+// - Must have dummy struct DOMClass as base
+// - Must implement member function Data() that returns a pointer
+// -   Must be constructible from this pointer
+// - Must have static function pointer collection_access with return type identical
+//     to that of Data()
 template<typename T>
 concept CollectionCompatible = std::is_base_of_v<DOMClass, T>
     && requires(T t, lxb_dom_collection_t* col, size_t index) {
-        { t.Data() } -> std::convertible_to<void*>;
-        { t.Data() } -> std::convertible_to<T>;
-        { T::collection_access(col, index) } -> std::convertible_to<void*>;
-        { T::collection_access(col, index) } -> std::convertible_to<T>;
-    };
+    requires std::is_constructible_v<T, decltype(t.Data())>;
+    { T::collection_access(col, index) } -> std::same_as<decltype(t.Data())>;
+};
 
+// Non-owning node wrapper
 class Node : public DOMClass
 {
 public:
@@ -50,11 +49,12 @@ public:
 
     lxb_dom_node_t* Data() const;
 
-    constexpr const static auto collection_access = printf;
+    constexpr static auto collection_access = lxb_dom_collection_node;
 private:
     lxb_dom_node_t* ptr;
 };
 
+// Non-owning element wrapper
 class Element : public DOMClass
 {
 public:
@@ -67,7 +67,7 @@ public:
 
     lxb_dom_element_t* Data() const;
 
-    constexpr const static auto collection_access = lxb_dom_collection_element;
+    constexpr static auto collection_access = lxb_dom_collection_element;
 private:
     lxb_dom_element_t* ptr;
 };
@@ -77,6 +77,7 @@ inline const Element ELEMENT_NULL { ELEMENT_NULL_VALUE };
 inline const Element ELEMENT_HEAD { (lxb_dom_element_t*) ELEMENT_HEAD_VALUE };
 inline const Element ELEMENT_BODY { (lxb_dom_element_t*) ELEMENT_BODY_VALUE };
 
+// Owning collection wrapper
 template<CollectionCompatible T>
 class Collection
 {
