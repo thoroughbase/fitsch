@@ -22,13 +22,13 @@ lxb_dom_node_t* Node::Data() const { return ptr; }
 
 Element::Element(lxb_dom_element_t* element) : ptr(element) {}
 
-bool Element::HasAttr(string attrname) const
+bool Element::HasAttr(const string& attrname) const
 {
     return lxb_dom_element_attr_is_exist(ptr, (lxb_char_t*)attrname.data(),
                                          attrname.size());
 }
 
-string Element::GetAttrValue(string attrname) const
+string Element::GetAttrValue(const string& attrname) const
 {
     lxb_dom_attr_t* attr;
     if (!(attr = lxb_dom_element_attr_by_name(ptr, (lxb_char_t*)attrname.data(),

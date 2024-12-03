@@ -60,8 +60,8 @@ class Element : public DOMClass
 public:
     Element(lxb_dom_element_t* element);
 
-    bool HasAttr(string attrname) const;
-    string GetAttrValue(string attrname) const;
+    bool HasAttr(const string& attrname) const;
+    string GetAttrValue(const string& attrname) const;
 
     Node FirstChild() const;
 
