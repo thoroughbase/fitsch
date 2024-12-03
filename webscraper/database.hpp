@@ -47,7 +47,7 @@ public:
 
             for (auto& r : results) {
                 json j = json::parse(bsoncxx::to_json(r));
-                T t = j.template get<T>();
+                T t = j.get<T>();
                 for (auto it = terms.begin(); it != terms.end(); ++it) {
                     if (*it == std::string(j[field])) { terms.erase(it); break; }
                 }
@@ -62,7 +62,7 @@ public:
         return matches;
     }
 
-    template <typename T>
+    template<typename T>
     void Put(const string& cl, const string& field, const std::vector<T>& items)
     {
         if (!valid) {
