@@ -110,7 +110,7 @@ private:
 class App
 {
 public:
-    App(string cfg_path);
+    App(const string& cfg_path);
     ~App();
 
     void AddStore(const Store* store);

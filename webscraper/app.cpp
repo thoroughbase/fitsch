@@ -161,7 +161,7 @@ void TC_GetQueriesDB(TaskRunner* runner, const Task& t)
 
 // App
 
-App::App(string cfg_path)
+App::App(const string& cfg_path)
 {
     curl_global_init(CURL_GLOBAL_DEFAULT);
 
