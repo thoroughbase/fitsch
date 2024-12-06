@@ -1,8 +1,10 @@
 #pragma once
 
 #include <string>
+#include <string_view>
+#include <compare>
 #include <vector>
-#include <map>
+#include <unordered_map>
 #include <ctime>
 
 #include <nlohmann/json.hpp>
@@ -18,41 +20,44 @@ enum Region { IE };
 // SuperValu price per unit types:
 // - "/kg", " each", "/75cl", "/70cl", "/l", "/ml", "/m²"
 enum Unit { None = 0, Piece = 1, Kilogrammes = 2, Litres = 3, SqMetres = 4 };
+inline const char* UNIT_SUFFIXES[] = { "", " each", "/kg", "/l", "/m²" };
+
 enum Currency { EUR };
-const static std::map<Currency, string> CURRENCY_SYMBOLS = {
-    { EUR, "€" }
-};
 
-struct Price : public std::pair<Currency, unsigned>
+struct Price
 {
-    Price();
-    Price(const std::pair<Currency, unsigned>& p);
-    Price(Currency c, unsigned p);
-    Price(string s);
+    string ToString() const;
+	static Price FromString(string str);
 
-    string str() const;
+	std::partial_ordering operator<=>(const Price& other) const;
+    Price operator*(float b) const;
 
-    bool operator>(Price b);
-    bool operator<(Price b);
-    bool operator==(Price b);
-    Price operator/(float b);
-    Price operator*(float b);
+    Currency currency = EUR;
+    unsigned value = 0;
 };
 
+// Price struct is serialised as a tuple of numerical values
+void to_json(json& j, const Price& p);
+void from_json(const json& j, Price& p);
 
-struct PricePU : public std::pair<Unit, Price>
+struct PricePU
 {
-    PricePU();
-    PricePU(const std::pair<Unit, Price>& p);
-    PricePU(Unit u, Price p);
-    PricePU(string s);
+    string ToString() const;
+    static PricePU FromString(const string& str);
 
-    string str() const;
+    std::partial_ordering operator<=>(const PricePU& other) const;
+
+    Price price { EUR, 0 };
+    Unit unit = None;
 };
+
+// Price per unit struct is serialised as a tuple of unit & price tuple
+void to_json(json& j, const PricePU& p);
+void from_json(const json& j, PricePU& p);
 
 struct StoreSelection : public std::vector<StoreID>
 {
-    StoreSelection();
+    StoreSelection() = default;
     StoreSelection(StoreID id);
 
     bool Has(StoreID id) const;
@@ -90,7 +95,7 @@ struct QueryTemplate
 {
     string query_string;
     StoreSelection stores;
-    std::map<string, QueryResultInfo> results;
+    std::unordered_map<string, QueryResultInfo> results;
     std::time_t timestamp;
     int depth;
 };

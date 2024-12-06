@@ -4,60 +4,33 @@
 #include <cstdlib>
 #include <ctime>
 
+// Constant hash-maps
+
+const static std::unordered_map<Currency, std::string_view> CURRENCY_SYMBOLS = {
+    { EUR, "€" }
+};
+
+const static std::unordered_map<std::string_view, std::pair<Unit, float>>
+  UNIT_CONVERSIONS = {
+    { "kg",   { Unit::Kilogrammes, 1 } },
+    { "75cl", { Unit::Litres, 1 / 0.75f } },
+    { "70cl", { Unit::Litres, 1 / 0.7f } },
+    { "l",    { Unit::Litres, 1 } },
+    { "ml",   { Unit::Litres, 1000 } },
+    { "m²",   { Unit::SqMetres, 1 } },
+    { "each", { Unit::None, 1 } }
+};
+
 // Price
 
-Price::Price() {}
-
-Price::Price(const std::pair<Currency, unsigned>& p)
+string Price::ToString() const
 {
-    first = p.first;
-    second = p.second;
-}
+    std::string result = std::to_string(value);
 
-Price::Price(Currency c, unsigned p)
-{
-    first = c;
-    second = p;
-}
-
-Price::Price(string s)
-{
-    size_t comma;
-    if ((comma = s.find(',')) != string::npos) {
-        s.erase(comma, 1);
-    }
-
-    size_t ss_start;
-
-    for (auto& [currency, symbol] : CURRENCY_SYMBOLS) {
-        if ((ss_start = s.find(symbol)) == string::npos) { ss_start = 0; continue; }
-        else {
-            first = currency;
-            ss_start += symbol.size();
-            break;
-        }
-    }
-
-    s = s.substr(ss_start);
-    size_t ss_point = s.find(".");
-
-    try {
-        second = std::stoi(s.substr(0, ss_point)) * 100;
-        if (ss_point != string::npos)
-            second += std::stoi(s.substr(ss_point + 1));
-    } catch (const std::exception& e) {
-        Log(WARNING, "Exception converting string {} to Price: {}", s, e.what());
-    }
-}
-
-string Price::str() const
-{
-    std::string result = std::to_string(second);
-
-    result.insert(0, CURRENCY_SYMBOLS.at(first));
-    if (second >= 100)
+    result.insert(0, CURRENCY_SYMBOLS.at(currency).data());
+    if (value >= 100)
         result.insert(result.size() - 2, ".");
-    else if (second >= 10)
+    else if (value >= 10)
         result.insert(result.size() - 2, "0.");
     else
         result.insert(result.size() - 1, "0.0");
@@ -65,84 +38,111 @@ string Price::str() const
     return result;
 }
 
-bool Price::operator>(Price b) { return second > b.second; }
-bool Price::operator<(Price b) { return second < b.second; }
-bool Price::operator==(Price b) { return second == b.second; }
-Price Price::operator*(float f) { return {first, static_cast<unsigned>(second * f)}; }
-Price Price::operator/(float f) { return {first, static_cast<unsigned>(second / f)}; }
-
-PricePU::PricePU() {}
-
-PricePU::PricePU(const std::pair<Unit, Price>& p)
+Price Price::FromString(string str)
 {
-    first = p.first;
-    second = p.second;
-}
+	Price price;
+    size_t comma;
+    if ((comma = str.find(',')) != string::npos)
+        str.erase(comma, 1);
 
-PricePU::PricePU(Unit u, Price p)
-{
-    first = u;
-    second = p;
-}
+    std::string_view view(str);
 
-PricePU::PricePU(string s)
-{
-    if (s.empty()) {
-        first = Unit::None;
-        second = {EUR, 0};
-        return;
+    size_t ss_start;
+
+    for (auto& [cur, symbol] : CURRENCY_SYMBOLS) {
+        if (view.find(symbol) != 0) continue;
+        else { // Assume symbol can only occur before numerical values
+            price.currency = cur;
+            view.remove_prefix(symbol.size());
+            break;
+        }
     }
 
-    size_t ss;
-    if ((ss = s.find("/")) != string::npos) {
-        string u = s.substr(ss + 1);
-        string p = s.substr(0, ss);
-        Price pp = p;
-        if (u == "kg") {
-            first = Unit::Kilogrammes;
-            second = pp;
-        } else if (u == "75cl") {
-            first = Unit::Litres;
-            second = pp / 0.75;
-        } else if (u == "70cl") {
-            first = Unit::Litres;
-            second = pp / 0.7;
-        } else if (u == "l") {
-            first = Unit::Litres;
-            second = pp;
-        } else if (u == "ml") {
-            first = Unit::Litres;
-            second = pp * 1000;
-        } else if (u == "m²") {
-            first = Unit::SqMetres;
-            second = pp;
-        } else {
-            Log(WARNING, "Unrecognised unit for '{}'!", s);
-        }
-    } else if ((ss = s.find(" ")) != string::npos) {
-        string u = s.substr(ss + 1);
-        string p = s.substr(0, ss);
+    size_t ss_point = view.find('.');
 
-        if (u == "each") {
-            first = Unit::Piece;
-            second = p;
-        } else {
-            Log(WARNING, "Unrecognised unit for '{}'!", s);
-        }
-    } else {
-        Log(WARNING, "Unrecognised delimiter/unit for '{}'!", s);
+    try {
+        price.value = std::stoi(view.substr(0, ss_point).data()) * 100;
+        if (ss_point != string::npos)
+            price.value += std::stoi(view.substr(ss_point + 1).data());
+    } catch (const std::exception& e) {
+        Log(WARNING, "Error converting string {} to Price: {}", str, e.what());
+        return {};
     }
+
+    return price;
 }
 
-string PricePU::str() const
+std::partial_ordering Price::operator<=>(const Price& other) const
 {
-    std::string result = second.str();
-    const static char* UNIT_SUFFIXES[] = { "", " each", "/kg", "/l", "/m²" };
-
-    return result + UNIT_SUFFIXES[first];
+    if (currency != other.currency) return std::partial_ordering::unordered;
+    return value <=> other.value;
 }
 
-StoreSelection::StoreSelection() {}
+Price Price::operator*(float f) const
+{
+    return { currency, static_cast<unsigned>(value * f) };
+}
+
+void to_json(json& j, const Price& p)
+{
+    j = { json::array({ p.currency, p.value }) };
+}
+
+void from_json(const json& j, Price& p)
+{
+    p.currency = j[0];
+    p.value = j[1];
+}
+
+// Price per unit
+
+string PricePU::ToString() const
+{
+    return price.ToString() + UNIT_SUFFIXES[unit];
+}
+
+PricePU PricePU::FromString(const string& str)
+{
+    if (str.empty()) return {};
+
+    size_t delimiter;
+    if ((delimiter = str.find('/')) == string::npos) {
+        if ((delimiter = str.find(' ')) == string::npos) {
+            Log(WARNING, "Unrecognised delimiter/unit for '{}'!", str);
+            return {};
+        }
+    }
+
+    std::string_view unit_view(str.data() + delimiter + 1);
+    std::string_view price_view(str.data(), delimiter);
+
+    if (!UNIT_CONVERSIONS.contains(unit_view)) {
+        Log(WARNING, "Unrecognised unit for '{}'!", str);
+        return {};
+    }
+
+    auto [unit_type, factor] = UNIT_CONVERSIONS.at(unit_view);
+    return { Price::FromString(std::string(price_view)) * factor, unit_type };
+}
+
+std::partial_ordering PricePU::operator<=>(const PricePU& other) const
+{
+	if (unit != other.unit) return std::partial_ordering::unordered;
+	return price <=> other.price;
+}
+
+void to_json(json& j, const PricePU& p)
+{
+    j = json::array({ p.unit, p.price });
+}
+
+void from_json(const json& j, PricePU& p)
+{
+    p.unit = j[0];
+    p.price = j[1];
+}
+
+// StoreSelection
 
 StoreSelection::StoreSelection(StoreID id) { push_back(id); }
 
@@ -181,20 +181,22 @@ void StoreSelection::Add(StoreID id)
     if (!Has(id)) push_back(id);
 }
 
+// ProductList
+
 ProductList::ProductList(int d) : depth(d) {}
 
 ProductList::ProductList(const Product& p)
 {
-    push_back({ p, QueryResultInfo {0} });
+    emplace_back(p, QueryResultInfo {0});
 }
 
 ProductList::ProductList(const std::vector<Product>& products, int d) : depth(d)
 {
-    int i;
-    for (auto& p : products) {
-        push_back({p, {i}});
-        i++;
-    }
+	reserve(products.size());
+
+    int i = 0;
+    for (auto& p : products)
+        emplace_back(p, QueryResultInfo { i++ });
 }
 
 void ProductList::Add(const ProductList& l)
@@ -206,9 +208,7 @@ void ProductList::Add(const ProductList& l)
 
 Product ProductList::First() const
 {
-    if (size()) {
-        return at(0).first;
-    }
+    if (size()) return at(0).first;
 
     return PRODUCT_ERROR;
 }
@@ -216,16 +216,11 @@ Product ProductList::First() const
 QueryTemplate ProductList::AsQueryTemplate(const string& querystr,
                                            const StoreSelection& ids) const
 {
-    QueryTemplate tmpl;
+    QueryTemplate tmpl { .query_string = querystr, .stores = ids,
+                         .timestamp = std::time(nullptr), .depth = depth };
 
-    tmpl.query_string = querystr;
-    tmpl.stores = ids;
-    tmpl.timestamp = std::time(nullptr);
-    tmpl.depth = depth;
-
-    for (auto it = begin(); it != end(); ++it) {
+    for (auto it = begin(); it != end(); ++it)
         tmpl.results.emplace((*it).first.id, (*it).second);
-    }
 
     return tmpl;
 }
@@ -233,9 +228,10 @@ QueryTemplate ProductList::AsQueryTemplate(const string& querystr,
 std::vector<Product> ProductList::AsProductVector() const
 {
     std::vector<Product> r;
+    r.reserve(size());
 
-    for (auto it = begin(); it != end(); ++it) {
+    for (auto it = begin(); it != end(); ++it)
         r.push_back((*it).first);
-    }
+
     return r;
 }

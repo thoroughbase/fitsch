@@ -11,8 +11,8 @@ Product SV_GetProductAtURL(const HTML& html)
 {
     Collection<Element> metatags = html.SearchTag("meta", ELEMENT_HEAD);
 
-    Product result;
-    result.store = stores::SuperValu.id;
+    Product result { .store = stores::SuperValu.id };
+
     for (Element e : metatags) {
         if (!e.HasAttr("itemprop")) continue;
 
@@ -28,16 +28,18 @@ Product SV_GetProductAtURL(const HTML& html)
         } else if (property == "sku") {
             result.id = stores::SuperValu.prefix + content;
         } else if (property == "price") {
-            result.item_price = content;
+            result.item_price = Price::FromString(content);
         }
     }
 
     Collection<Element> priceper = html.SearchClass("PdpUnitPrice-", ELEMENT_BODY, true);
 
-    if (!priceper.size()) result.price_per_unit = { Unit::Piece, result.item_price };
-    else {
+    if (!priceper.size()) {
+        result.price_per_unit.unit = Unit::Piece;
+        result.price_per_unit.price = result.item_price;
+    } else {
         Element e = priceper[0];
-        result.price_per_unit = e.FirstChild().Text();
+        result.price_per_unit = PricePU::FromString(e.FirstChild().Text());
     }
 
     return result;
@@ -99,16 +101,17 @@ ProductList SV_Search(const string& query, CURL* curl, int depth)
             str_id = str_id.substr(0, str_id.find('-'));
 
             product.name = namestr;
-            product.item_price = price_c[0].FirstChild().Text();
-            product.price_per_unit = price_per_c[0].FirstChild().Text();
+            product.item_price = Price::FromString(price_c[0].FirstChild().Text());
+            product.price_per_unit =
+                PricePU::FromString(price_per_c[0].FirstChild().Text());
             product.id = stores::SuperValu.prefix + str_id;
             product.url = url_c[0].GetAttrValue("href");
             product.image_url = image_c[0].GetAttrValue("src");
             product.timestamp = std::time(nullptr);
 
-            if (product.price_per_unit.first == Unit::None) {
-                product.price_per_unit.first = Unit::Piece;
-                product.price_per_unit.second = product.item_price;
+            if (product.price_per_unit.unit == Unit::None) {
+                product.price_per_unit.unit = Unit::Piece;
+                product.price_per_unit.price = product.item_price;
             }
 
             results.emplace_back(product, QueryResultInfo { (int) results.size() });

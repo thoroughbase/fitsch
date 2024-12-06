@@ -29,7 +29,7 @@ void PrintProduct(App* a, const std::vector<TaskResult>& results)
 
     const Product& p = tr.value.First();
     fmt::print("Product at URL `{}`:\n  {}: {} [{}]\n", tr.origin.args.str, p.name,
-               p.item_price.str(), p.price_per_unit.str());
+               p.item_price.ToString(), p.price_per_unit.ToString());
 
     a->database.PutProducts({p});
 }
@@ -47,11 +47,13 @@ void PrintQuery(App* a, const std::vector<TaskResult>& results)
     const string& querystr = tr.origin.args.str;
     list.depth = tr.origin.args.depth;
 
-    std::sort(list.begin(), list.end(), [](const auto& a, const auto& b) {
+    std::sort(list.begin(), list.end(), [] (const auto& a, const auto& b) -> bool {
         // Sort by price if units don't match
-        return (a.first.price_per_unit.first == b.first.price_per_unit.first) ?
-                a.first.price_per_unit.second < b.first.price_per_unit.second :
-                a.first.item_price < b.first.item_price;
+        PricePU pu_a = a.first.price_per_unit, pu_b = b.first.price_per_unit;
+        Price p_a = a.first.item_price, p_b = b.first.item_price;
+
+        return pu_a <=> pu_b == std::partial_ordering::unordered ?
+            p_a < p_b : pu_a < pu_b;
     });
 
     string text = fmt::format("Results for query `{}`:\n================\n", querystr);
@@ -59,7 +61,7 @@ void PrintQuery(App* a, const std::vector<TaskResult>& results)
     for (const auto& pair : list) {
         const Product& p = pair.first;
         text += fmt::format("[{}] {}: {} [{}]\n", a->GetStore(p.store)->prefix,
-                    p.name, p.item_price.str(), p.price_per_unit.str());
+                    p.name, p.item_price.ToString(), p.price_per_unit.ToString());
     }
 
     fmt::print("{}", text);
