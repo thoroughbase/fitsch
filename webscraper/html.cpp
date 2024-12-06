@@ -166,12 +166,11 @@ void HTML::_SearchAttr(lxb_dom_collection_t* c, const string& attr, const string
     lxb_dom_element_t* rootptr = Resolve(root);
     lxb_dom_collection_clean(c);
 
-    lxb_status_t status
-        = broad ? lxb_dom_elements_by_attr_contain(rootptr, c,
-            (lxb_char_t*)attr.data(), attr.size(), (lxb_char_t*)val.data(),
-            val.size(), true)
-          : lxb_dom_elements_by_attr(rootptr, c, (lxb_char_t*)attr.data(), attr.size(),
-                                     (lxb_char_t*)val.data(), val.size(), false);
+    auto func = broad ? lxb_dom_elements_by_attr_contain : lxb_dom_elements_by_attr;
+
+    lxb_status_t status = func(rootptr, c, (lxb_char_t*)attr.data(), attr.size(),
+                               (lxb_char_t*)val.data(), val.size(), broad);
+
     if (status != LXB_STATUS_OK)
         Log(WARNING, "SearchAttr failed with code {}", status);
 }
