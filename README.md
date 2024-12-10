@@ -4,8 +4,9 @@ A groceries website that aggregates product data from stores across a geographic
 Currently based in and focused on Dublin, Ireland.
 
 Libraries:
-- [json (nlohmann)](https://github.com/nlohmann/json) - Install by creating directory `include` in the top level of the project and placing the single-include header file into it.
+- [json (nlohmann)](https://github.com/nlohmann/json)
 - [lexbor (lexborisov)](https://github.com/lexbor/lexbor)
 - [MongoDB C++ driver](https://github.com/mongodb/mongo-cxx-driver)
 - [libcurl](https://curl.se/download.html)
 - [fmt (vitaut)](https://github.com/fmtlib/fmt)
+- [buxtehude (dna65@thoroughbase)](https://github.com/thoroughbase/buxtehude)
