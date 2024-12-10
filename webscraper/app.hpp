@@ -5,12 +5,15 @@
 #include <queue>
 #include <mutex>
 #include <atomic>
+#include <memory>
 
 #include <curl/curl.h>
 
 #include "common/product.hpp"
 #include "webscraper/stores.hpp"
 #include "webscraper/database.hpp"
+
+#include <buxtehude/buxtehude.hpp>
 
 #define VERSION "0.0.1"
 #define ENTRY_EXPIRY_TIME 86400 * 2
@@ -49,7 +52,7 @@ struct TaskResult
 {
     Task origin;
     ProductList value;
-    ResultFlags flags;
+    ResultFlags flags = 0;
 };
 
 class TaskRunner
@@ -121,6 +124,7 @@ public:
 
     Delegator delegator;
     Database database;
+    std::unique_ptr<buxtehude::Client> bclient;
 
 private:
     std::map<StoreID, const Store*> stores;

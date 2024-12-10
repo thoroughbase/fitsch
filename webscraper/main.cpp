@@ -19,21 +19,10 @@ int main(int argc, char** argv)
         "https://shop.supervalu.ie/sm/delivery/rsid/5550/product/batchelors-chick-peas-225-g-id-1018033000";
     a.GetProductAtURL(StoreID::SUPERVALU, url);
 
+    string input;
     while (1) {
-        string str;
-        std::getline(std::cin, str);
-        if (str == "quit") break;
-
-        size_t ss = 0;
-        while (ss != string::npos && str.size()) {
-            ss = str.find(",");
-            string query = str.substr(0, ss);
-            if (!query.empty()) {
-                Log(INFO, "Running query {}", query);
-                a.DoQuery(StoreID::SUPERVALU, query, 15);
-            }
-            if (ss != string::npos) str = str.substr(ss + 1);
-        }
+        std::getline(std::cin, input);
+        if (input == "quit") break;
     }
 
     return 0;

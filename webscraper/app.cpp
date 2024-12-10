@@ -14,8 +14,16 @@
 
 #include <nlohmann/json.hpp>
 
+#include <buxtehude/validate.hpp>
+
 #include "common/product.hpp"
 #include "common/util.hpp"
+
+// Validation tests
+
+const buxtehude::ValidationSeries VALIDATE_QUERY = {
+    { "/terms"_json_pointer, [] (const json& j) { return j.is_array(); } }
+};
 
 // ResultCallbacks
 
@@ -71,6 +79,36 @@ void PrintQuery(App* a, const std::vector<TaskResult>& results)
         auto qt = list.AsQueryTemplate(querystr, tr.origin.args.stores);
         a->database.PutQueryTemplates({qt});
         if (list.size()) a->database.PutProducts(list.AsProductVector());
+    }
+}
+
+void SendQuery(App* a, const std::vector<TaskResult>& results)
+{
+    ProductList list;
+    bool upload = false;
+    for (auto& r : results) {
+        list.Add(r.value);
+        if (r.flags & RF_QUERIED_WEBSITE) upload = true;
+    }
+
+    const TaskResult& tr = results[0];
+    const string& querystr = tr.origin.args.str;
+    list.depth = tr.origin.args.depth;
+
+    std::vector<Product> products = list.AsProductVector();
+
+    a->bclient->Write({ .type = "query-result", .dest = "terminal",
+        .content = {
+            { "items", products },
+            { "term", querystr }
+        }
+    });
+
+    if (upload) {
+        Log(DEBUG, "Uploading query {}", querystr);
+        auto qt = list.AsQueryTemplate(querystr, tr.origin.args.stores);
+        a->database.PutQueryTemplates({qt});
+        if (list.size()) a->database.PutProducts(products);
     }
 }
 
@@ -166,6 +204,9 @@ void TC_GetQueriesDB(TaskRunner* runner, const Task& t)
 App::App(const string& cfg_path)
 {
     curl_global_init(CURL_GLOBAL_DEFAULT);
+    buxtehude::Initialise([] (buxtehude::LogLevel l, const std::string& msg) {
+        Log((LogLevel)l, "(buxtehude) {}", msg);
+    });
 
     Log(INFO, "Starting Fitsch {}", VERSION);
 
@@ -191,6 +232,32 @@ App::App(const string& cfg_path)
 
     delegator.AddRunners(this, max_conc);
     database.Connect({mongouri});
+
+    bclient = std::make_unique<buxtehude::Client>();
+    bclient->preferences.format = buxtehude::MSGPACK;
+    if (!bclient->IPConnect("localhost", 1637, "webscraper")) {
+        Log(WARNING, "Failed to connect to buxtehude server");
+        bclient->Close();
+        bclient.reset();
+        return;
+    }
+
+    Log(INFO, "Established connection to buxtehude server");
+
+    bclient->AddHandler("query", [this] (buxtehude::Client& client,
+                        const buxtehude::Message& msg) {
+        if (!buxtehude::ValidateJSON(msg.content, VALIDATE_QUERY)) return;
+        for (const json& j : msg.content["terms"]) {
+            delegator.QueueTasks({
+                Task {
+                    TaskArgs { j.get<string>(), { stores::SuperValu.id }, 10 },
+                    TC_GetQueriesDB
+                }
+            }, SendQuery);
+        }
+    });
+
+    bclient->Run();
 }
 
 App::~App()
