@@ -14,28 +14,21 @@
 #define ELEMENT_HEAD_VALUE 0x01
 #define ELEMENT_BODY_VALUE 0x02
 
-class HTML;
-class Element;
-
-struct DOMClass {};
-
 using std::string;
 
 // Concept CollectionCompatible for objects that can be inserted into Collection:
-// - Must have dummy struct DOMClass as base
 // - Must implement member function Data() that returns a pointer
 // -   Must be constructible from this pointer
 // - Must have static function pointer collection_access with return type identical
 //     to that of Data()
 template<typename T>
-concept CollectionCompatible = std::is_base_of_v<DOMClass, T>
-    && requires(T t, lxb_dom_collection_t* col, size_t index) {
+concept CollectionCompatible = requires(T t, lxb_dom_collection_t* col, size_t index) {
     requires std::is_constructible_v<T, decltype(t.Data())>;
     { T::collection_access(col, index) } -> std::same_as<decltype(t.Data())>;
 };
 
 // Non-owning node wrapper
-class Node : public DOMClass
+class Node
 {
 public:
     Node(lxb_dom_node_t* node);
@@ -55,7 +48,7 @@ private:
 };
 
 // Non-owning element wrapper
-class Element : public DOMClass
+class Element
 {
 public:
     Element(lxb_dom_element_t* element);
