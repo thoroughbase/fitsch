@@ -45,83 +45,85 @@ Product SV_GetProductAtURL(const HTML& html)
     return result;
 }
 
-ProductList SV_Search(const string& query, CURL* curl, int depth)
+string SV_GetProductSearchURL(std::string_view query_string)
 {
-    string base_url = stores::SuperValu.homepage + "results?q=" + query;
+    char* buffer = curl_easy_escape(nullptr, query_string.data(), query_string.size());
+    if (!buffer) {
+        Log(WARNING, "Failed to escape query string {}", query_string);
+        return {};
+    }
+
+    std::string url = fmt::format("{}/results?q={}&skip=0",
+        stores::SuperValu.homepage, buffer);
+
+    curl_free(buffer);
+
+    return url;
+}
+
+ProductList SV_ParseProductSearch(const string& data, int depth)
+{
+    // TODO: Reimplement reading multiple pages
+
     ProductList results(depth);
     results.reserve(depth > 0 ? depth : 30);
 
     Collection<Element> item_listings, name_c, price_c, price_per_c, image_c, url_c;
+    int page_items = 0;
 
-    int max_per_page = 30, skip = 0;
-    int page_items;
+    HTML html(data);
+    html.SearchClass(item_listings, "ColListing", ELEMENT_BODY, true);
 
-    HTML html;
+    int i = 0;
+    for (Element e : item_listings) {
+        Product product { .store = stores::SuperValu.id };
 
-    do {
-        string url = base_url + "&skip=" + std::to_string(skip);
-        page_items = 0;
+        html.SearchAttr(name_c, "data-testid", "ProductNameTestId", e, true);
+        html.SearchClass(price_c, "ProductCardPrice-", e, true);
+        html.SearchClass(price_per_c, "ProductCardPriceInfo", e, true);
+        html.SearchClass(image_c, "ProductCardImage-", e, true);
+        html.SearchClass(url_c, "ProductCardHiddenLink", e, true);
 
-        html.ReadFromURL(curl, url);
-
-        html.SearchClass(item_listings, "ColListing", ELEMENT_BODY, true);
-        if (!(page_items = item_listings.size())) break;
-
-        skip += max_per_page;
-        int i = 0;
-        for (Element e : item_listings) {
-            Product product;
-            product.store = stores::SuperValu.id;
-
-            html.SearchAttr(name_c, "data-testid", "ProductNameTestId", e, true);
-            html.SearchClass(price_c, "ProductCardPrice-", e, true);
-            html.SearchClass(price_per_c, "ProductCardPriceInfo", e, true);
-            html.SearchClass(image_c, "ProductCardImage-", e, true);
-            html.SearchClass(url_c, "ProductCardHiddenLink", e, true);
-
-            if (!name_c.size() || !price_c.size() || !price_per_c.size()
-             || !image_c.size() || !url_c.size()) {
-                Log(WARNING, "One or more details missing for product {} on page {}",
-                    i, url);
-                continue;
-            }
-
-            Node node = name_c[0].FirstChild();
-            string namestr;
-            do {
-                if ((namestr = node.Text()) != BLANK) break;
-            } while ((node = node.Next()));
-
-            if (namestr == BLANK) {
-                Log(WARNING, "Name not found for product {} on page {}", i, url);
-                continue;
-            }
-
-            string str_id = name_c[0].GetAttrValue("data-testid");
-            str_id = str_id.substr(0, str_id.find('-'));
-
-            product.name = namestr;
-            product.item_price = Price::FromString(price_c[0].FirstChild().Text());
-            product.price_per_unit =
-                PricePU::FromString(price_per_c[0].FirstChild().Text());
-            product.id = stores::SuperValu.prefix + str_id;
-            product.url = url_c[0].GetAttrValue("href");
-            product.image_url = image_c[0].GetAttrValue("src");
-            product.timestamp = std::time(nullptr);
-
-            if (product.price_per_unit.unit == Unit::None) {
-                product.price_per_unit.unit = Unit::Piece;
-                product.price_per_unit.price = product.item_price;
-            }
-
-            results.emplace_back(product, QueryResultInfo { (int) results.size() });
-
-            if (results.size() >= depth) break;
-
-            ++i;
+        if (!name_c.size() || !price_c.size() || !price_per_c.size()
+         || !image_c.size() || !url_c.size()) {
+            Log(WARNING, "One or more details missing for product {} on page", i);
+            continue;
         }
 
+        Node node = name_c[0].FirstChild();
+        string namestr;
+        do {
+            if ((namestr = node.Text()) != BLANK) break;
+        } while ((node = node.Next()));
+
+        if (namestr == BLANK) {
+            Log(WARNING, "Name not found for product {}", i);
+            continue;
+        }
+
+        string str_id = name_c[0].GetAttrValue("data-testid");
+        str_id = str_id.substr(0, str_id.find('-'));
+
+        product.name = namestr;
+        product.item_price = Price::FromString(price_c[0].FirstChild().Text());
+        product.price_per_unit =
+            PricePU::FromString(price_per_c[0].FirstChild().Text());
+        product.id = stores::SuperValu.prefix + str_id;
+        product.url = url_c[0].GetAttrValue("href");
+        product.image_url = image_c[0].GetAttrValue("src");
+        product.timestamp = std::time(nullptr);
+
+        if (product.price_per_unit.unit == Unit::None) {
+            product.price_per_unit.unit = Unit::Piece;
+            product.price_per_unit.price = product.item_price;
+        }
+
+        results.emplace_back(product, QueryResultInfo { (int) results.size() });
+
         if (results.size() >= depth) break;
-    } while (page_items >= max_per_page);
+
+        ++i;
+    }
+
     return results;
 }

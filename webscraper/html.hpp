@@ -135,7 +135,6 @@ class HTML
 {
 public:
     HTML();
-    HTML(CURL* curl, const string& url);
     HTML(const string& data);
 
     HTML(const HTML& other) = delete; // Not CopyConstructible
@@ -143,7 +142,6 @@ public:
 
     ~HTML();
 
-    void ReadFromURL(CURL* curl, const string& url);
     void Parse(const string& data);
 
     lxb_html_document_t* Data() const;

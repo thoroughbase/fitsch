@@ -55,24 +55,9 @@ HTML::HTML()
     if (!dom) Log(WARNING, "Error creating DOM");
 }
 
-HTML::HTML(CURL* curl, const string& url) : HTML()
-{
-    ReadFromURL(curl, url);
-}
-
 HTML::HTML(const string& data) : HTML() { Parse(data); }
 
 HTML::~HTML() { lxb_html_document_destroy(dom); }
-
-void HTML::ReadFromURL(CURL* curl, const string& url)
-{
-    if (!dom) {
-        Log(WARNING, "Cannot read page {}, DOM initialisation failed", url);
-        return;
-    }
-
-    Parse(RetrievePage(curl, url));
-}
 
 void HTML::Parse(const string& data)
 {

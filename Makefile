@@ -1,8 +1,8 @@
 BUILD_DIR := ./build
 INCLUDE_DIRS := include . $(shell find /usr/local/include/*/third_party -type d) # BSONCXX header files are located in weird paths by default
 INCLUDE := $(addprefix -I,$(INCLUDE_DIRS))
-LIBRARIES := -lcurl -lfmt -llexbor -lmongocxx -lbsoncxx -lbuxtehude
-CXXFLAGS := -std=c++20
+LIBRARIES := -lcurl -lfmt -llexbor -lmongocxx -lbsoncxx -lbuxtehude -levent_core -levent_pthreads
+CXXFLAGS := -std=c++20 -g -O0
 CPPFLAGS := $(INCLUDE) -MMD -MP
 LDFLAGS := $(LIBRARIES) -rpath /usr/local/lib
 
