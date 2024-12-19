@@ -29,4 +29,4 @@ void Log(LogLevel l, fmt::format_string<T...> format, T&&... args)
 
 string RetrievePage(CURL* curl, const string& url);
 
-const static string BLANK;
+inline const string BLANK;
