@@ -5,7 +5,6 @@
 #include <ctime>
 #include <algorithm>
 
-#include <curl/curl.h>
 #include <fmt/format.h>
 #include <fmt/chrono.h>
 
@@ -26,7 +25,5 @@ void Log(LogLevel l, fmt::format_string<T...> format, T&&... args)
                fmt::localtime(std::time(nullptr)),
                fmt::vformat(format, fmt::make_format_args(args...)));
 }
-
-string RetrievePage(CURL* curl, const string& url);
 
 inline const string BLANK;
