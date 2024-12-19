@@ -27,7 +27,7 @@ const buxtehude::ValidationSeries VALIDATE_QUERY = {
 
 // ResultCallbacks
 
-void PrintProduct(const std::vector<Result>& results, App* app, const string& url)
+static void PrintProduct(const std::vector<Result>& results, App* app, const string& url)
 {
     if (results.empty()) {
         Log(WARNING, "No product found at URL {}", url);
@@ -42,7 +42,7 @@ void PrintProduct(const std::vector<Result>& results, App* app, const string& ur
     app->database.PutProducts({product});
 }
 
-void SendQuery(const std::vector<Result>& results, App* app, const string& dest,
+static void SendQuery(const std::vector<Result>& results, App* app, const string& dest,
     const string& query_string, const StoreSelection& stores)
 {
     ProductList list(10);
@@ -76,14 +76,14 @@ void SendQuery(const std::vector<Result>& results, App* app, const string& dest,
 
 // TaskCallbacks
 // Single product
-Result TC_GetProduct_Parse(TaskContext ctx, const Store* store, const string& data)
+static Result TC_GetProduct_Parse(TaskContext ctx, const Store* store, const string& data)
 {
     HTML html(data);
 
     return { GENERIC_VALID, new Product(store->GetProductAtURL(html)) };
 }
 
-Result TC_GetProduct_Fetch(TaskContext ctx, App* app, const string& url,
+static Result TC_GetProduct_Fetch(TaskContext ctx, App* app, const string& url,
     const Store* store)
 {
     auto handle = ctx.delegator->QueueExtraExternalTask(ctx.group_id);
@@ -99,7 +99,7 @@ Result TC_GetProduct_Fetch(TaskContext ctx, App* app, const string& url,
 }
 
 // Product list
-Result TC_DoQuery_Parse(TaskContext ctx, const Store* store, const string& data,
+static Result TC_DoQuery_Parse(TaskContext ctx, const Store* store, const string& data,
     int depth)
 {
     ProductList list = store->ParseProductSearch(data, depth);
@@ -107,7 +107,7 @@ Result TC_DoQuery_Parse(TaskContext ctx, const Store* store, const string& data,
     return { GENERIC_VALID, new std::pair<bool, ProductList>(true, std::move(list)) };
 }
 
-Result TC_DoQuery(TaskContext ctx, App* app, const string& query_string,
+static Result TC_DoQuery(TaskContext ctx, App* app, const string& query_string,
     const StoreSelection& stores, int depth)
 {
     // Figure out what pages need to be fetched first
@@ -129,7 +129,7 @@ Result TC_DoQuery(TaskContext ctx, App* app, const string& query_string,
     return {};
 }
 
-Result TC_GetQueriesDB(TaskContext ctx, App* app, const string& query_string,
+static Result TC_GetQueriesDB(TaskContext ctx, App* app, const string& query_string,
     const StoreSelection& stores, int depth)
 {
 
