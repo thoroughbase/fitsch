@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <mongocxx/instance.hpp>
@@ -26,7 +27,8 @@ public:
 
     // Modify input by removing search terms that have been found
     template<typename T>
-    std::vector<T> Get(const string& cl, const string& field, std::vector<string>& terms)
+    std::vector<T> Get(const string& cl, std::string_view field,
+                       std::vector<string>& terms)
     {
         if (!valid) {
             Log(WARNING, "Not connected to database, could not get documents");
@@ -63,7 +65,7 @@ public:
     }
 
     template<typename T>
-    void Put(const string& cl, const string& field, const std::vector<T>& items)
+    void Put(const string& cl, std::string_view field, const std::vector<T>& items)
     {
         if (!valid) {
             Log(WARNING, "Not connected to database, could not put documents");

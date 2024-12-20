@@ -43,7 +43,7 @@ void from_json(const json& j, Price& p);
 struct PricePU
 {
     string ToString() const;
-    static PricePU FromString(const string& str);
+    static PricePU FromString(std::string_view str);
 
     std::partial_ordering operator<=>(const PricePU& other) const;
 

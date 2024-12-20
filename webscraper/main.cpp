@@ -1,8 +1,5 @@
 #include <string>
 
-#include <fmt/core.h>
-#include <fmt/format.h>
-
 #include "webscraper/app.hpp"
 #include "webscraper/stores.hpp"
 

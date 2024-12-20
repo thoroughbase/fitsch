@@ -1,10 +1,7 @@
 #pragma once
 
 #include <string>
-#include <vector>
-#include <queue>
-#include <mutex>
-#include <atomic>
+#include <string_view>
 #include <memory>
 
 #include <curl/curl.h>
@@ -25,7 +22,7 @@ using std::string;
 class App
 {
 public:
-    App(const string& cfg_path);
+    App(std::string_view cfg_path);
     ~App();
 
     void AddStore(const Store* store);

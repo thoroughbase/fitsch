@@ -6,8 +6,6 @@
 #include <lexbor/html/parser.h>
 #include <lexbor/dom/interfaces/element.h>
 
-#include <curl/curl.h>
-
 #include "common/util.hpp"
 
 #define ELEMENT_NULL_VALUE 0x00
@@ -53,8 +51,8 @@ class Element
 public:
     Element(lxb_dom_element_t* element);
 
-    bool HasAttr(const string& attrname) const;
-    string GetAttrValue(const string& attrname) const;
+    bool HasAttr(std::string_view attrname) const;
+    string GetAttrValue(std::string_view attrname) const;
 
     Node FirstChild() const;
 
@@ -135,40 +133,40 @@ class HTML
 {
 public:
     HTML();
-    HTML(const string& data);
+    HTML(std::string_view data);
 
     HTML(const HTML& other) = delete; // Not CopyConstructible
     HTML& operator=(const HTML& other) = delete; // Not CopyAssignable
 
     ~HTML();
 
-    void Parse(const string& data);
+    void Parse(std::string_view data);
 
     lxb_html_document_t* Data() const;
 
     // Searching functions
-    Collection<Element> SearchTag(const string& tag,
+    Collection<Element> SearchTag(std::string_view tag,
                                   const Element& root=ELEMENT_NULL) const;
-    void SearchTag(Collection<Element>& col, const string& tag,
+    void SearchTag(Collection<Element>& col, std::string_view tag,
                    const Element& root=ELEMENT_NULL) const;
 
-    Collection<Element> SearchAttr(const string& attr, const string& val,
+    Collection<Element> SearchAttr(std::string_view attr, std::string_view val,
                                    const Element& root=ELEMENT_NULL,
                                    bool broad=false) const;
-    void SearchAttr(Collection<Element>& col, const string& attr, const string& val,
+    void SearchAttr(Collection<Element>& col, std::string_view attr, std::string_view val,
                     const Element& root=ELEMENT_NULL, bool broad=false) const;
 
-    Collection<Element> SearchClass(const string& name, const Element& root=ELEMENT_NULL,
+    Collection<Element> SearchClass(std::string_view name, const Element& root=ELEMENT_NULL,
                                     bool broad=false) const;
-    void SearchClass(Collection<Element>& col, const string& name,
+    void SearchClass(Collection<Element>& col, std::string_view name,
                      const Element& root=ELEMENT_NULL, bool broad=false) const;
 
 private:
     lxb_dom_element_t* Resolve(const Element& e) const;
 
-    void _SearchTag(lxb_dom_collection_t* c, const string& tag,
+    void _SearchTag(lxb_dom_collection_t* c, std::string_view tag,
                     const Element& root=ELEMENT_NULL) const;
-    void _SearchAttr(lxb_dom_collection_t* c, const string& attr, const string& val,
+    void _SearchAttr(lxb_dom_collection_t* c, std::string_view attr, std::string_view val,
                      const Element& root=ELEMENT_NULL, bool broad=false) const;
 
     lxb_html_document_t* dom;

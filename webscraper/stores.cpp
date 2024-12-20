@@ -1,7 +1,6 @@
 #include "webscraper/stores.hpp"
 
-#include <vector>
-#include <iostream>
+#include <curl/curl.h>
 
 #include "common/util.hpp"
 
@@ -61,7 +60,7 @@ string SV_GetProductSearchURL(std::string_view query_string)
     return url;
 }
 
-ProductList SV_ParseProductSearch(const string& data, int depth)
+ProductList SV_ParseProductSearch(std::string_view data, int depth)
 {
     // TODO: Reimplement reading multiple pages
 

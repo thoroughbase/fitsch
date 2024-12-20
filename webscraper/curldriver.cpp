@@ -3,8 +3,6 @@
 #include <event2/thread.h>
 #include <sys/time.h>
 
-#include <cstdio>
-
 // Libevent callbacks
 
 static void Libevent_TimerCallback(int fd, short what, void* general_ctx)

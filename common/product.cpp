@@ -101,7 +101,7 @@ string PricePU::ToString() const
     return price.ToString() + UNIT_SUFFIXES[unit];
 }
 
-PricePU PricePU::FromString(const string& str)
+PricePU PricePU::FromString(std::string_view str)
 {
     if (str.empty()) return {};
 

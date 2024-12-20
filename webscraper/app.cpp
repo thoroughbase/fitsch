@@ -1,13 +1,7 @@
 #include "webscraper/app.hpp"
 
-#include <iostream>
 #include <fstream>
-#include <thread>
-#include <ctime>
-#include <chrono>
 #include <cstdlib>
-
-#include <curl/curl.h>
 
 #include <fmt/format.h>
 #include <fmt/core.h>
@@ -187,7 +181,7 @@ static Result TC_GetQueriesDB(TaskContext ctx, App* app, const string& query_str
 
 // App
 
-App::App(const string& cfg_path)
+App::App(std::string_view cfg_path)
 {
     CURLDriver::GlobalInit();
     buxtehude::Initialise([] (buxtehude::LogLevel l, const string& msg) {

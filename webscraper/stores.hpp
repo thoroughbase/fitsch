@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include <vector>
+#include <string_view>
 
 #include "common/product.hpp"
 #include "webscraper/html.hpp"
@@ -14,13 +14,13 @@ struct Store
     string name, prefix, homepage;
     Region region;
 
-    ProductList (*ParseProductSearch)(const string&, int);
+    ProductList (*ParseProductSearch)(std::string_view, int);
     string (*GetProductSearchURL)(std::string_view);
     Product (*GetProductAtURL)(const HTML&);
 };
 
 // See stores.md
-ProductList SV_ParseProductSearch(const string& data, int depth=0);
+ProductList SV_ParseProductSearch(std::string_view data, int depth=0);
 string SV_GetProductSearchURL(std::string_view query);
 Product SV_GetProductAtURL(const HTML& html);
 
