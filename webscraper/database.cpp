@@ -6,14 +6,12 @@
 
 using nlohmann::json;
 
-Database::Database() {}
-
 Database::Database(const mongocxx::uri& uri) { Connect(uri); }
 
 bool Database::Connect(const mongocxx::uri& uri)
 {
     try {
-        pool = new mongocxx::pool(uri);
+        pool = std::make_unique<mongocxx::pool>(uri);
         if (Ping()) {
             Log(INFO, "Connected to database.");
             valid = true;
@@ -25,8 +23,6 @@ bool Database::Connect(const mongocxx::uri& uri)
 
     return valid;
 }
-
-Database::~Database() { delete pool; }
 
 std::vector<Product> Database::GetProducts(std::vector<string>& ids)
 {

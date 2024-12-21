@@ -20,10 +20,9 @@ using std::string;
 class Database
 {
 public:
-    Database();
+    Database() = default;
     Database(const mongocxx::uri& uri);
     bool Connect(const mongocxx::uri& uri);
-    ~Database();
 
     // Modify input by removing search terms that have been found
     template<typename T>
@@ -108,7 +107,7 @@ public:
     bool Ping();
 
 private:
-    mongocxx::pool* pool;
+    std::unique_ptr<mongocxx::pool> pool;
     mongocxx::instance instance;
     bool valid = false;
 };
