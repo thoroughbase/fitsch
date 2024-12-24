@@ -47,8 +47,6 @@ Price Price::FromString(string str)
 
     std::string_view view(str);
 
-    size_t ss_start;
-
     for (auto& [cur, symbol] : CURRENCY_SYMBOLS) {
         if (view.find(symbol) != 0) continue;
         else { // Assume symbol can only occur before numerical values
