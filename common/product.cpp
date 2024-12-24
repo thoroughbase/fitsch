@@ -146,32 +146,15 @@ void from_json(const json& j, PricePU& p)
 
 ProductList::ProductList(int d) : depth(d) {}
 
-ProductList::ProductList(const Product& p)
+void ProductList::Add(const ProductList& other)
 {
-    emplace_back(p, QueryResultInfo {0});
-}
-
-ProductList::ProductList(const std::vector<Product>& products, int d) : depth(d)
-{
-	reserve(products.size());
-
-    int i = 0;
-    for (auto& p : products)
-        emplace_back(p, QueryResultInfo { i++ });
-}
-
-void ProductList::Add(const ProductList& l)
-{
-    insert(end(), l.begin(), l.end());
-    if (l.depth != 0 && l.depth < depth)
-        depth = l.depth;
-}
-
-Product ProductList::First() const
-{
-    if (size()) return at(0).first;
-
-    return PRODUCT_ERROR;
+    products.insert(products.end(), other.products.begin(), other.products.end());
+    if (depth == SEARCH_DEPTH_INDEFINITE && other.depth != depth) {
+    	depth = other.depth;
+    	return;
+    }
+    if (other.depth < depth && other.depth != SEARCH_DEPTH_INDEFINITE)
+    	depth = other.depth;
 }
 
 QueryTemplate ProductList::AsQueryTemplate(const string& querystr,
@@ -180,7 +163,9 @@ QueryTemplate ProductList::AsQueryTemplate(const string& querystr,
     QueryTemplate tmpl { .query_string = querystr, .stores = ids,
                          .timestamp = std::time(nullptr), .depth = depth };
 
-    for (auto it = begin(); it != end(); ++it)
+    tmpl.results.reserve(products.size());
+
+    for (auto it = products.begin(); it != products.end(); ++it)
         tmpl.results.emplace((*it).first.id, (*it).second);
 
     return tmpl;
@@ -189,9 +174,9 @@ QueryTemplate ProductList::AsQueryTemplate(const string& querystr,
 std::vector<Product> ProductList::AsProductVector() const
 {
     std::vector<Product> r;
-    r.reserve(size());
+    r.reserve(products.size());
 
-    for (auto it = begin(); it != end(); ++it)
+    for (auto it = products.begin(); it != products.end(); ++it)
         r.push_back((*it).first);
 
     return r;

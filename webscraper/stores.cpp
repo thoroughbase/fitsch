@@ -65,7 +65,7 @@ ProductList SV_ParseProductSearch(std::string_view data, int depth)
     // TODO: Reimplement reading multiple pages
 
     ProductList results(depth);
-    results.reserve(depth > 0 ? depth : 30);
+    results.products.reserve(depth > 0 ? depth : 30);
 
     Collection<Element> item_listings, name_c, price_c, price_per_c, image_c, url_c;
     int page_items = 0;
@@ -117,9 +117,10 @@ ProductList SV_ParseProductSearch(std::string_view data, int depth)
             product.price_per_unit.price = product.item_price;
         }
 
-        results.emplace_back(product, QueryResultInfo { (int) results.size() });
+        results.products.emplace_back(std::move(product),
+            QueryResultInfo { (int) results.products.size() });
 
-        if (results.size() >= depth) break;
+        if (results.products.size() >= depth) break;
 
         ++i;
     }

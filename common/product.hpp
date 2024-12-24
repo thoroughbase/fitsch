@@ -90,22 +90,18 @@ struct QueryTemplate
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(QueryTemplate, query_string, stores, results,
     timestamp, depth);
 
-// Internal representation of a list of products from a query. Does not need to be
-// serialised.
-struct ProductList : public std::vector<std::pair<Product, QueryResultInfo>>
+inline const int SEARCH_DEPTH_INDEFINITE = -1;
+
+struct ProductList
 {
-    ProductList(int depth=0);
-    ProductList(const Product& p);
-    // Assumes already ordered by relevance
-    ProductList(const std::vector<Product>& products, int depth=0);
+	ProductList(int depth = SEARCH_DEPTH_INDEFINITE);
 
-    void Add(const ProductList& l);
+	void Add(const ProductList& other);
 
-    Product First() const;
     QueryTemplate AsQueryTemplate(const string& querystr, const StoreSelection& ids)
         const;
     std::vector<Product> AsProductVector() const;
 
-    // The depth to which a search was performed. 0 = as many items as possible
-    int depth;
+	std::vector<std::pair<Product, QueryResultInfo>> products;
+	int depth;
 };

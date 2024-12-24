@@ -39,7 +39,7 @@ static void PrintProduct(const std::vector<Result>& results, App* app, const str
 static void SendQuery(const std::vector<Result>& results, App* app, const string& dest,
     const string& query_string, const StoreSelection& stores)
 {
-    ProductList list(10);
+    ProductList list;
     bool upload = false;
 
     for (auto& result : results) {
@@ -64,7 +64,7 @@ static void SendQuery(const std::vector<Result>& results, App* app, const string
         Log(DEBUG, "Uploading query {}", query_string);
         auto qt = list.AsQueryTemplate(query_string, stores);
         app->database.PutQueryTemplates({ qt });
-        if (list.size()) app->database.PutProducts(products);
+        if (!list.products.empty()) app->database.PutProducts(products);
     }
 }
 
@@ -165,8 +165,8 @@ static Result TC_GetQueriesDB(TaskContext ctx, App* app, const string& query_str
                 // TODO: Handle certain products not being found
             }
 
-            for (const auto& p : products)
-                list.emplace_back(p, q.results.at(p.id));
+            for (auto& p : products)
+                list.products.emplace_back(std::move(p), q.results.at(p.id));
         }
     }
 
