@@ -142,45 +142,6 @@ void from_json(const json& j, PricePU& p)
     p.price = j[1];
 }
 
-// StoreSelection
-
-StoreSelection::StoreSelection(StoreID id) { push_back(id); }
-
-bool StoreSelection::Has(StoreID id) const
-{
-    for (auto it = begin(); it < end(); ++it)
-        if (*it == id) return true;
-
-    return false;
-}
-
-bool StoreSelection::Has(const StoreSelection& selection) const
-{
-    if (selection.size() > size()) return false;
-
-    for (StoreID i : selection)
-        if (!Has(i)) return false;
-
-    return true;
-}
-
-void StoreSelection::Remove(StoreID id)
-{
-    for (auto it = begin(); it < end();)
-        if (*it == id) it = erase(it);
-        else ++it;
-}
-
-void StoreSelection::Remove(const StoreSelection& s)
-{
-    for (StoreID i : s) Remove(i);
-}
-
-void StoreSelection::Add(StoreID id)
-{
-    if (!Has(id)) push_back(id);
-}
-
 // ProductList
 
 ProductList::ProductList(int d) : depth(d) {}

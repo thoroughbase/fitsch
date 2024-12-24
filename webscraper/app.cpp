@@ -126,7 +126,6 @@ static Result TC_DoQuery(TaskContext ctx, App* app, const string& query_string,
 static Result TC_GetQueriesDB(TaskContext ctx, App* app, const string& query_string,
     const StoreSelection& stores, int depth)
 {
-
     // Get query template stored in database
     std::vector<string> queries = { std::string(query_string) };
     ProductList list(depth);
@@ -147,9 +146,11 @@ static Result TC_GetQueriesDB(TaskContext ctx, App* app, const string& query_str
             missing = stores;
         } else {
             // Are all the stores that we asked for there?
-            if (!q.stores.Has(stores)) {
+            if (!std::includes(q.stores.begin(), q.stores.end(),
+                               stores.begin(), stores.end())) {
                 missing = stores;
-                missing.Remove(q.stores); // Just redo the missing ones
+                // Just redo the missing ones
+                for (const StoreID id : q.stores) std::erase(missing, id);
             }
 
             // Retrieve products from database as well
@@ -224,8 +225,12 @@ App::App(std::string_view cfg_path)
         for (const json& j : msg.content["terms"]) {
             std::string term = j.get<string>();
             delegator.QueueTasks(
-                { SendQuery, this, msg.src, term, stores::SuperValu.id },
-                Task { TC_GetQueriesDB, this, term, stores::SuperValu.id, 10 }
+                { SendQuery, this, msg.src, term,
+                  StoreSelection { stores::SuperValu.id }
+                },
+                Task { TC_GetQueriesDB, this, term,
+                       StoreSelection { stores::SuperValu.id }, 10
+                }
             );
         }
     });

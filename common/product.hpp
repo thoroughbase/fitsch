@@ -55,19 +55,7 @@ struct PricePU
 void to_json(json& j, const PricePU& p);
 void from_json(const json& j, PricePU& p);
 
-struct StoreSelection : public std::vector<StoreID>
-{
-    StoreSelection() = default;
-    StoreSelection(StoreID id);
-
-    bool Has(StoreID id) const;
-    bool Has(const StoreSelection& selection) const;
-
-    void Remove(StoreID id);
-    void Remove(const StoreSelection& stores);
-
-    void Add(StoreID id);
-};
+using StoreSelection = std::vector<StoreID>;
 
 struct Product
 {
