@@ -140,6 +140,8 @@ CURLDriver::~CURLDriver()
 
     if (thread.joinable()) thread.join();
 
+    event_free(interrupt_event);
+
     for (auto& [handle, info] : easy_handles) {
         curl_multi_remove_handle(general_context.multi_handle, handle);
         curl_easy_cleanup(handle);
