@@ -18,7 +18,7 @@ const std::unordered_map<std::string_view, std::pair<Unit, float>>
     { "l",    { Unit::Litres, 1 } },
     { "ml",   { Unit::Litres, 1000 } },
     { "m²",   { Unit::SqMetres, 1 } },
-    { "each", { Unit::None, 1 } }
+    { "each", { Unit::Piece, 1 } }
 };
 
 // Price
