@@ -1,0 +1,60 @@
+body {
+    margin: 0;
+    background-color: #eeeeff;
+    font-family: "Open Sans", serif;
+}
+
+body h2 {
+    margin-left: 1.5%;
+}
+
+.banner {
+    overflow: hidden;
+    font-family: "Open Sans", serif;
+    font-weight: normal;
+    font-size: 40px;
+    background-color: #5555aa;
+    border-top: 0px;
+    border-left: 0px;
+    border-right: 0px;
+    border-bottom: 1px;
+    border-style: solid;
+}
+
+.banner p {
+    text-align: center;
+    float: left;
+    margin-left: 3%;
+    margin-top: 0%;
+    margin-bottom: 0%;
+}
+
+.listings {
+    display: grid;
+    gap: 1px;
+    grid-template-columns: repeat(4, 1fr);
+    margin-left: 3%;
+    margin-right: 3%;
+    border-style: solid;
+}
+
+.listings img {
+    border: 1px;
+    border-color: #888888;
+    border-style: solid;
+}
+
+.listings p.item-name {
+    font-size: 12px;
+    margin: 0;
+    text-wrap: balance;
+}
+
+.listings p.item-price {
+    font-size: 10px;
+    margin: 0;
+}
+
+.item-listing {
+    margin-left: 5%;
+}

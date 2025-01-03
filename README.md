@@ -11,3 +11,4 @@ Libraries:
 - [fmt (vitaut)](https://github.com/fmtlib/fmt)
 - [buxtehude (dna65@thoroughbase)](https://github.com/thoroughbase/buxtehude)
 - [libevent 2.1.12-stable](https://libevent.org/) - Must be built with thread support
+- [crow](https://github.com/CrowCpp/Crow)

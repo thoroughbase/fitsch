@@ -1,5 +1,5 @@
 BUILD_DIR := ./build
-INCLUDE_DIRS := include . $(shell find /usr/local/include/*/third_party -type d) # BSONCXX header files are located in weird paths by default
+INCLUDE_DIRS := . $(shell find /usr/local/include/*/third_party -type d) # BSONCXX header files are located in weird paths by default
 INCLUDE := $(addprefix -I,$(INCLUDE_DIRS))
 LIBRARIES := -lcurl -lfmt -llexbor -lmongocxx -lbsoncxx -lbuxtehude -levent_core -levent_pthreads
 CXXFLAGS := -std=c++20
@@ -27,9 +27,20 @@ FITSCH_TERMINAL_LDFLAGS := -lbuxtehude -lfmt -rpath /usr/local/lib
 $(FITSCH_TERMINAL_TARGET): $(FITSCH_TERMINAL_OBJECTS)
 	$(CXX) $(FITSCH_TERMINAL_LDFLAGS) $^ -o $@
 
+# Webserver building
+
+FITSCH_WEBSERVER_TARGET := fitsch-webserver
+FITSCH_WEBSERVER_SOURCE := $(wildcard webserver/*.cpp common/product.cpp)
+FITSCH_WEBSERVER_OBJECTS := $(FITSCH_WEBSERVER_SOURCE:%.cpp=$(BUILD_DIR)/%.o)
+FITSCH_WEBSERVER_DEPENDENCIES := $(FITSCH_WEBSERVER_OBJECTS:%.o=%.d)
+FITSCH_WEBSERVER_LDFLAGS := -lbuxtehude -lfmt -lcurl -rpath /usr/local/lib
+
+$(FITSCH_WEBSERVER_TARGET): $(FITSCH_WEBSERVER_OBJECTS)
+	$(CXX) $(FITSCH_WEBSERVER_LDFLAGS) $^ -o $@
+
 # All
 
-all: $(FITSCH_WEBSCRAPER_TARGET) $(FITSCH_TERMINAL_TARGET)
+all: $(FITSCH_WEBSCRAPER_TARGET) $(FITSCH_TERMINAL_TARGET) $(FITSCH_WEBSERVER_TARGET)
 
 # Generic source building rules
 
@@ -43,3 +54,4 @@ clean:
 
 -include $(FITSCH_WEBSCRAPER_DEPENDENCIES)
 -include $(FITSCH_TERMINAL_DEPENDENCIES)
+-include $(FITSCH_WEBSERVER_DEPENDENCIES)

@@ -66,7 +66,8 @@ int main()
         terminal.Write({
             .type = "query", .dest = "webscraper", .only_first = true,
             .content = {
-                { "terms", terms }
+                { "terms", terms },
+                { "request-id", 0 }
             }
         });
     }

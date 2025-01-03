@@ -16,7 +16,8 @@
 // Validation tests
 
 const buxtehude::ValidationSeries VALIDATE_QUERY = {
-    { "/terms"_json_pointer, [] (const json& j) { return j.is_array(); } }
+    { "/terms"_json_pointer, [] (const json& j) { return j.is_array(); } },
+    { "/request-id"_json_pointer, [] (const json& j) { return j.is_number(); } }
 };
 
 // ResultCallbacks
@@ -37,7 +38,7 @@ static void PrintProduct(const std::vector<Result>& results, App* app, const str
 }
 
 static void SendQuery(const std::vector<Result>& results, App* app, const string& dest,
-    const string& query_string, const StoreSelection& stores)
+    const string& query_string, const StoreSelection& stores, int request_id)
 {
     ProductList list;
     bool upload = false;
@@ -56,7 +57,8 @@ static void SendQuery(const std::vector<Result>& results, App* app, const string
     app->bclient->Write({ .type = "query-result", .dest = dest,
         .content = {
             { "items", products },
-            { "term", query_string }
+            { "term", query_string },
+            { "request-id", request_id }
         }
     });
 
@@ -222,11 +224,13 @@ App::App(std::string_view cfg_path)
     bclient->AddHandler("query", [this] (buxtehude::Client& client,
                         const buxtehude::Message& msg) {
         if (!buxtehude::ValidateJSON(msg.content, VALIDATE_QUERY)) return;
+        int request_id = msg.content["request-id"];
         for (const json& j : msg.content["terms"]) {
             std::string term = j.get<string>();
             delegator.QueueTasks(
                 { SendQuery, this, msg.src, term,
-                  StoreSelection { stores::SuperValu.id }
+                  StoreSelection { stores::SuperValu.id },
+                  request_id
                 },
                 Task { TC_GetQueriesDB, this, term,
                        StoreSelection { stores::SuperValu.id }, 10
