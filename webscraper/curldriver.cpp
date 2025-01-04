@@ -3,6 +3,8 @@
 #include <event2/thread.h>
 #include <sys/time.h>
 
+#include "common/util.hpp"
+
 // Libevent callbacks
 
 static void Libevent_TimerCallback(int fd, short what, void* general_ctx)
@@ -35,6 +37,16 @@ static void Libevent_InterruptCallback(int fd, short what, void* general_ctx)
     event_base_loopbreak(ctx->ebase);
 }
 
+static void Libevent_AddTransferCallback(int fd, short what, void* general_ctx)
+{
+    GeneralCURLContext* ctx = (GeneralCURLContext*) general_ctx;
+
+    curl_multi_add_handle(ctx->multi_handle, ctx->easy_handle_to_add);
+
+    ctx->return_code = curl_multi_socket_action(ctx->multi_handle,
+        CURL_SOCKET_TIMEOUT, 0, &ctx->running_handles);
+}
+
 // CURL callbacks
 
 static size_t CURL_WriteData(char* data, size_t size, size_t nmemb, std::string* buffer)
@@ -60,8 +72,6 @@ static int CURL_SocketInfoCallback(CURL* easy_handle, int fd, int what, void* ge
     }
 
     if (what & CURL_POLL_REMOVE) {
-        if (s_ctx->read_write_event) event_free(s_ctx->read_write_event);
-
         auto iterator = std::find_if(sock_contexts.begin(), sock_contexts.end(),
             [fd] (auto& unique_ptr) {
                 return unique_ptr->fd == fd;
@@ -105,6 +115,13 @@ static int CURL_TimerInfoCallback(CURLM* multi_handle, long timeout, void* gener
     return 0;
 }
 
+// Struct functions
+
+SocketCURLContext::~SocketCURLContext()
+{
+    if (read_write_event) event_free(read_write_event);
+}
+
 // CURLDriver
 
 CURLDriver::CURLDriver(int pool_size)
@@ -128,6 +145,9 @@ CURLDriver::CURLDriver(int pool_size)
         curl_easy_setopt(easy_handle, CURLOPT_WRITEFUNCTION, CURL_WriteData);
         curl_easy_setopt(easy_handle, CURLOPT_WRITEDATA, &info.buffer);
     }
+
+    general_context.add_transfer_event = event_new(general_context.ebase, -1, 0,
+        Libevent_AddTransferCallback, &general_context);
 }
 
 CURLDriver::~CURLDriver()
@@ -148,10 +168,7 @@ CURLDriver::~CURLDriver()
     }
 
     if (general_context.timer_event) event_free(general_context.timer_event);
-
-    for (auto& unique_ptr : general_context.socket_contexts) {
-        if (unique_ptr->read_write_event) event_free(unique_ptr->read_write_event);
-    }
+    event_free(general_context.add_transfer_event);
 
     curl_multi_cleanup(general_context.multi_handle);
     event_base_free(general_context.ebase);
@@ -208,11 +225,10 @@ void CURLDriver::PerformTransfer_NoLock(std::string_view url, TransferDoneCallba
     handle_info->available = false;
     handle_info->buffer.clear();
 
-    curl_multi_add_handle(general_context.multi_handle, easy_handle);
-
-    general_context.return_code =
-        curl_multi_socket_action(general_context.multi_handle,
-            CURL_SOCKET_TIMEOUT, 0, &general_context.running_handles);
+    // Initiating transfers via a libevent callback ensures that CURL callbacks
+    // are only ever triggered from one thread for thread-safety with no locks
+    general_context.easy_handle_to_add = easy_handle;
+    event_active(general_context.add_transfer_event, 0, 0);
 }
 
 void CURLDriver::PerformNextInQueue()
@@ -230,8 +246,31 @@ void CURLDriver::Drive()
     while (event_base_loop(general_context.ebase, EVLOOP_NO_EXIT_ON_EMPTY) == 0) {
         if (general_context.interrupt) break;
 
-        if (general_context.return_code) {
+        std::lock_guard<std::mutex> guard(container_mutex);
+        if (CURLMcode error_code = general_context.return_code;
+            error_code != CURLM_OK) {
             // Error, remove handles
+
+            Log(WARNING, "Error occurred during curl transfer: {} (CURLMcode = {})",
+                curl_multi_strerror(error_code), (int)error_code);
+            Log(INFO, "Re-registering handles & events...");
+
+            event_free(general_context.timer_event);
+            general_context.timer_event = nullptr;
+
+            general_context.socket_contexts.clear();
+
+            for (auto& [handle, info] : easy_handles) {
+                if (info.available) continue;
+                info.buffer.clear();
+                // Not sure if this fixes things...
+                // Official libcurl documentation states that all handles should be
+                // removed and "new ones should be added" in the event of an error
+                // from curl_multi_socket_action
+                curl_multi_remove_handle(general_context.multi_handle, handle);
+                curl_multi_add_handle(general_context.multi_handle, handle);
+            }
+            continue;
         }
 
         CURLM* multi_handle = general_context.multi_handle;
@@ -240,19 +279,29 @@ void CURLDriver::Drive()
         CURLMsg* message;
         while ((message = curl_multi_info_read(multi_handle, &messages))
             != nullptr) {
+
             if (message->msg != CURLMSG_DONE) continue;
 
-            std::lock_guard<std::mutex> guard(container_mutex);
+            CURLcode error_code = message->data.result;
+            if (error_code != CURLE_OK) {
+                Log(WARNING, "Error occurred during curl transfer: {} (CURLcode = {})",
+                    curl_easy_strerror(error_code), (int)error_code);
+            }
 
             EasyHandleInfo& info = easy_handles[message->easy_handle];
-            if (info.callback) {
-                char* url = nullptr;
-                curl_easy_getinfo(message->easy_handle, CURLINFO_EFFECTIVE_URL, &url);
 
-                info.callback(info.buffer, url, message->data.result);
+            char* url = nullptr;
+            curl_easy_getinfo(message->easy_handle, CURLINFO_EFFECTIVE_URL, &url);
+            if (error_code == CURLE_OK) {
+                if (info.callback)
+                    info.callback(info.buffer, url, message->data.result);
             }
+
             curl_multi_remove_handle(multi_handle, message->easy_handle);
             info.available = true;
+
+            if (error_code != CURLE_OK)
+                pending.push(TransferRequest { std::string(url), info.callback });
 
             PerformNextInQueue();
         }

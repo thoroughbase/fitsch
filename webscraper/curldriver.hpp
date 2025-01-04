@@ -32,6 +32,8 @@ struct SocketCURLContext
 {
     event* read_write_event = nullptr;
     int fd;
+
+    ~SocketCURLContext();
 };
 
 struct GeneralCURLContext
@@ -41,6 +43,10 @@ struct GeneralCURLContext
     CURLM* multi_handle = nullptr;
     event_base* ebase = nullptr;
     event* timer_event = nullptr;
+    event* add_transfer_event = nullptr;
+
+    // Only for adding easy handles for transfer
+    CURL* easy_handle_to_add = nullptr;
 
     CURLMcode return_code = CURLM_OK;
     int running_handles = 0;
