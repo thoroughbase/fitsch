@@ -8,12 +8,9 @@
 #include <nlohmann/json.hpp>
 #include <fmt/core.h>
 
-using nlohmann::json;
+#include "common/validate.hpp"
 
-const buxtehude::ValidationSeries VALIDATE_QUERY_RESULT = {
-    { "/term"_json_pointer, buxtehude::predicates::NotEmpty },
-    { "/items"_json_pointer, [] (const json& j) { return j.is_array(); } }
-};
+using nlohmann::json;
 
 std::vector<std::string> split(std::string_view view, char delim)
 {
@@ -43,7 +40,7 @@ int main()
     Client terminal(server, "terminal");
 
     terminal.AddHandler("query-result", [] (Client& cl, const Message& m) {
-        if (!ValidateJSON(m.content, VALIDATE_QUERY_RESULT)) return;
+        if (!ValidateJSON(m.content, validate::QUERY_RESULT)) return;
         fmt::print("Query results ({}):\n", m.content["term"].get<std::string>());
 
         for (const json& j : m.content["items"]) {

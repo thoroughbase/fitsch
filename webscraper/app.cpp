@@ -12,13 +12,7 @@
 
 #include "common/product.hpp"
 #include "common/util.hpp"
-
-// Validation tests
-
-const buxtehude::ValidationSeries VALIDATE_QUERY = {
-    { "/terms"_json_pointer, [] (const json& j) { return j.is_array(); } },
-    { "/request-id"_json_pointer, [] (const json& j) { return j.is_number(); } }
-};
+#include "common/validate.hpp"
 
 // ResultCallbacks
 
@@ -223,7 +217,7 @@ App::App(std::string_view cfg_path)
 
     bclient->AddHandler("query", [this] (buxtehude::Client& client,
                         const buxtehude::Message& msg) {
-        if (!buxtehude::ValidateJSON(msg.content, VALIDATE_QUERY)) return;
+        if (!buxtehude::ValidateJSON(msg.content, validate::QUERY)) return;
         int request_id = msg.content["request-id"];
         for (const json& j : msg.content["terms"]) {
             std::string term = j.get<string>();

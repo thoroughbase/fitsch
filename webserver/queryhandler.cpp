@@ -4,20 +4,16 @@
 
 #include <nlohmann/json.hpp>
 
-using nlohmann::json;
+#include "common/validate.hpp"
 
-const buxtehude::ValidationSeries VALIDATE_QUERY_RESULT = {
-    { "/term"_json_pointer, buxtehude::predicates::NotEmpty },
-    { "/items"_json_pointer, [] (const json& j) { return j.is_array(); } },
-    { "/request-id"_json_pointer, [] (const json& j) { return j.is_number(); } }
-};
+using nlohmann::json;
 
 QueryHandler::QueryHandler(buxtehude::Client* bclient, std::string_view webscraper)
     : bclient(bclient), webscraper_name(webscraper)
 {
     bclient->AddHandler("query-result", [this] (buxtehude::Client& cl,
         const buxtehude::Message& msg) {
-        if (!buxtehude::ValidateJSON(msg.content, VALIDATE_QUERY_RESULT)) {
+        if (!buxtehude::ValidateJSON(msg.content, validate::QUERY_RESULT)) {
             Log(WARNING, "Invalid query-result message received!");
             return;
         }
