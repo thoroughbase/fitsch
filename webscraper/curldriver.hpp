@@ -62,12 +62,12 @@ public:
     // Creates a new thread for libevent & curl feedback loops
     void Run();
 
-    void PerformTransfer(std::string_view url, TransferDoneCallback callback);
+    void PerformTransfer(std::string_view url, TransferDoneCallback&& callback);
 
     static bool GlobalInit(long flags = CURL_GLOBAL_DEFAULT);
     static void GlobalCleanup();
 private:
-    void PerformTransfer_NoLock(std::string_view url, TransferDoneCallback callback);
+    void PerformTransfer_NoLock(std::string_view url, TransferDoneCallback&& callback);
     void PerformNextInQueue();
     void Drive();
 

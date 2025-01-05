@@ -183,11 +183,11 @@ void CURLDriver::Run()
     thread = std::move(thr);
 }
 
-void CURLDriver::PerformTransfer(std::string_view url, TransferDoneCallback cb)
+void CURLDriver::PerformTransfer(std::string_view url, TransferDoneCallback&& cb)
 {
     std::lock_guard<std::mutex> guard(container_mutex);
 
-    PerformTransfer_NoLock(url, cb);
+    PerformTransfer_NoLock(url, std::forward<TransferDoneCallback>(cb));
 }
 
 bool CURLDriver::GlobalInit(long flags)
@@ -201,7 +201,7 @@ void CURLDriver::GlobalCleanup()
     curl_global_cleanup();
 }
 
-void CURLDriver::PerformTransfer_NoLock(std::string_view url, TransferDoneCallback cb)
+void CURLDriver::PerformTransfer_NoLock(std::string_view url, TransferDoneCallback&& cb)
 {
     CURL* easy_handle = nullptr;
     EasyHandleInfo* handle_info = nullptr;
@@ -215,13 +215,13 @@ void CURLDriver::PerformTransfer_NoLock(std::string_view url, TransferDoneCallba
 
     if (!easy_handle) {
         // Add to queue
-        pending.push(TransferRequest { std::string(url), cb });
+        pending.push(TransferRequest { std::string(url), std::move(cb) });
         return;
     }
 
     curl_easy_setopt(easy_handle, CURLOPT_URL, url.data());
 
-    handle_info->callback = cb;
+    handle_info->callback = std::move(cb);
     handle_info->available = false;
     handle_info->buffer.clear();
 
@@ -235,10 +235,10 @@ void CURLDriver::PerformNextInQueue()
 {
     if (pending.empty()) return;
 
-    TransferRequest request = pending.front();
+    TransferRequest& request = pending.front();
+    PerformTransfer_NoLock(request.url,
+        std::forward<TransferDoneCallback>(request.callback));
     pending.pop();
-
-    PerformTransfer_NoLock(request.url, request.callback);
 }
 
 void CURLDriver::Drive()
@@ -301,7 +301,10 @@ void CURLDriver::Drive()
             info.available = true;
 
             if (error_code != CURLE_OK)
-                pending.push(TransferRequest { std::string(url), info.callback });
+                pending.push(TransferRequest {
+                    std::string(url),
+                    std::move(info.callback)
+                });
 
             PerformNextInQueue();
         }
