@@ -26,6 +26,9 @@ struct TransferRequest
 {
     std::string url;
     TransferDoneCallback callback;
+
+    TransferRequest(std::string url, TransferDoneCallback cb)
+    : url(url), callback(cb) {}
 };
 
 struct SocketCURLContext

@@ -214,8 +214,7 @@ void CURLDriver::PerformTransfer_NoLock(std::string_view url, TransferDoneCallba
     }
 
     if (!easy_handle) {
-        // Add to queue
-        pending.push(TransferRequest { std::string(url), std::move(cb) });
+        pending.emplace(std::string(url), std::forward<TransferDoneCallback>(cb));
         return;
     }
 
@@ -249,7 +248,6 @@ void CURLDriver::Drive()
         std::lock_guard<std::mutex> guard(container_mutex);
         if (CURLMcode error_code = general_context.return_code;
             error_code != CURLM_OK) {
-            // Error, remove handles
 
             Log(WARNING, "Error occurred during curl transfer: {} (CURLMcode = {})",
                 curl_multi_strerror(error_code), (int)error_code);
@@ -301,10 +299,7 @@ void CURLDriver::Drive()
             info.available = true;
 
             if (error_code != CURLE_OK)
-                pending.push(TransferRequest {
-                    std::string(url),
-                    std::move(info.callback)
-                });
+                pending.emplace(std::string(url), std::move(info.callback));
 
             PerformNextInQueue();
         }
