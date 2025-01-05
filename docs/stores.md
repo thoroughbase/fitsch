@@ -25,6 +25,11 @@ struct Product
 };
 ```
 
+### Stores
+
+[SuperValu](#supervalu)
+[Tesco](#tesco)
+
 ## SuperValu
 
 Last updated: 10th October 2024
@@ -113,3 +118,68 @@ SuperValu by default displays up to 30 items per page. Each item is contained in
 (5) The item price is contained in a `<span>` element of class `ProductCardPrice`.
 
 (6) The price per unit is contained in a `<span>` element of class `ProductCardPriceInfo`. This information may not be present for some items.
+
+## Tesco
+
+Last updated: 5th January 2025
+
+### Single product page
+
+[Sample page](https://www.tesco.ie/groceries/en-IE/products/262490576)
+
+All properties except the price per unit can be found in encoded in a JSON object contained in the following element in the head:
+```html
+<script type="application/ld+json" data-mfe-head="data-mfe-head">
+  ...
+</script>
+```
+
+The top level element `@graph` is an array of objects with set schemas.
+The key-value pair `@type` within each object indicates what the information describes.
+The product information is contained in the object with `"@type": "Product"`.
+
+The JSON pointer paths of each field within this object are as follows:
+
+Property | JSON Pointer (Relative)
+---|---
+Name | `/name`
+Description | `/description`
+Image URL | `/image/0` (array, first element)
+Price | `/offers/price` (number)
+Unique Identifier | `/sku`
+
+
+The price per unit can be found in an element that looks like the following:
+```html
+<p class="text__StyledText-sc-1jpzi8m-0 dyJCjQ ddsweb-text
+          styled__Subtext-sc-v0qv7n-2 nsITR
+          ddsweb-price__subtext">
+  €1.79/kg DR.WT
+</p>
+```
+
+There may be extra information beyond the price per unit, such as "DR.WT" indicating
+dry weight.
+
+### Search results page
+
+[Sample page](https://www.tesco.ie/groceries/en-IE/search?query=chicken)
+
+Each item is contained in a `<li>` element of class `product-list--list-item`.
+
+The product name is contained in a `<span>` element, which is a child of an `<a>` element
+of class `product-tile--title`.
+
+The relative product URL can be found in the `href` attribute of this `<a>` element.
+
+The product ID is contained in the product URL.
+Example: `<a href="/groceries/en-IE/products/312234724" ... ></a>`
+
+The item price is contained in a `<p>` element of class `beans-price__text`.
+This element may not always be present, for example if the item is out of stock.
+
+The price per unit is contained in a `<p>` element of class `beans-price__subtext`,
+and may be absent for the same reasons as the item price.
+
+The image URL is contained in an `<img>` element of class `product-image`, which
+is a child of a `<div>` element of class `product-image__container`.
