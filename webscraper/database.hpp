@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -33,7 +34,6 @@ public:
             Log(WARNING, "Not connected to database, could not get documents");
             return {};
         }
-        std::vector<T> matches;
 
         auto client = pool->acquire();
         mongocxx::database db = (*client)["fitsch"];
@@ -43,18 +43,16 @@ public:
             { field, {{ "$in", terms }} }
         };
 
+        std::vector<T> matches;
+        matches.reserve(terms.size());
         try {
             auto results = collection.find(bsoncxx::from_json(search_term.dump()));
 
             for (auto& r : results) {
                 json j = json::parse(bsoncxx::to_json(r));
-                T t = j.get<T>();
-                for (auto it = terms.begin(); it != terms.end(); ++it) {
-                    if (*it == std::string(j[field])) { terms.erase(it); break; }
-                }
-                matches.push_back(t);
+                std::erase(terms, j[field].get<string>());
+                matches.emplace_back(j.get<T>());
             }
-
         } catch (const std::exception& e) {
             Log(WARNING, "Error searching with term `{}`: {}", search_term.dump(),
                 e.what());
@@ -79,11 +77,15 @@ public:
 
         std::vector<bsoncxx::document::value> docs;
         std::vector<string> removals;
+
+        docs.reserve(items.size());
+        removals.reserve(items.size());
+
         for (auto& i : items) {
             json j = i;
 
-            docs.push_back(bsoncxx::from_json(j.dump()));
-            removals.push_back(j[field]);
+            docs.emplace_back(bsoncxx::from_json(j.dump()));
+            removals.emplace_back(j[field].get<string>());
         }
 
         json remove_command = {
