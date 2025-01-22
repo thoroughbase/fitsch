@@ -59,7 +59,7 @@ struct GeneralCURLContext
 class CURLDriver
 {
 public:
-    CURLDriver(int pool_size);
+    CURLDriver(int pool_size, std::string_view user_agent);
     ~CURLDriver();
 
     // Creates a new thread for libevent & curl feedback loops

@@ -124,7 +124,7 @@ SocketCURLContext::~SocketCURLContext()
 
 // CURLDriver
 
-CURLDriver::CURLDriver(int pool_size)
+CURLDriver::CURLDriver(int pool_size, std::string_view user_agent)
 {
     general_context.ebase = event_base_new();
     general_context.multi_handle = curl_multi_init();
@@ -144,6 +144,7 @@ CURLDriver::CURLDriver(int pool_size)
     for (auto& [easy_handle, info] : easy_handles) {
         curl_easy_setopt(easy_handle, CURLOPT_WRITEFUNCTION, CURL_WriteData);
         curl_easy_setopt(easy_handle, CURLOPT_WRITEDATA, &info.buffer);
+        curl_easy_setopt(easy_handle, CURLOPT_USERAGENT, user_agent.data());
     }
 
     general_context.add_transfer_event = event_new(general_context.ebase, -1, 0,

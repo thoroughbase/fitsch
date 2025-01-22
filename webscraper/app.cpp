@@ -198,8 +198,9 @@ App::App(std::string_view cfg_path)
     cfg_file.close();
 
     string mongouri = config["mongodb_uri"];
+    string user_agent = config["curl"]["user_agent"];
 
-    curl_driver = std::make_unique<CURLDriver>(128);
+    curl_driver = std::make_unique<CURLDriver>(128, user_agent);
     curl_driver->Run();
 
     database.Connect({mongouri});

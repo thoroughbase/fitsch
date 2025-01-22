@@ -127,3 +127,69 @@ ProductList SV_ParseProductSearch(std::string_view data, int depth)
 
     return results;
 }
+
+// Tesco
+
+ProductList TE_ParseProductSearch(std::string_view data, int depth)
+{
+    // TODO: Implement
+    return {};
+}
+
+string TE_GetProductSearchURL(std::string_view query)
+{
+    // TODO: Implement
+    return {};
+}
+
+Product TE_GetProductAtURL(const HTML& html)
+{
+    Collection<Element> product_json = html.SearchAttr("type", "application/ld+json",
+        ELEMENT_HEAD, false);
+
+    if (!product_json.size()) {
+        Log(WARNING, "Product information not found for Tesco product page - "
+                     "element not found");
+        return PRODUCT_ERROR;
+    }
+
+    json root_json_obj = json::parse(product_json[0].FirstChild().Text());
+    json& graph = root_json_obj["@graph"];
+    auto iterator = std::find_if(graph.begin(), graph.end(), [] (const json& j) {
+        return j["@type"].get<string>() == "Product";
+    });
+
+    if (iterator == graph.end()) {
+        Log(WARNING, "Product information not found for Tesco product page - "
+                     "JSON obj not found");
+        return PRODUCT_ERROR;
+    }
+
+    json& product_info = *iterator;
+
+    unsigned int price = product_info["offers"]["price"].get<float>() * 100;
+
+    Product result = {
+        .store = stores::Tesco.id, .name = product_info["name"],
+        .description = product_info["description"],
+        .id = stores::Tesco.prefix + product_info["sku"].get<string>(),
+        .image_url = product_info["image"][0],
+        .item_price = Price { EUR, price }
+    };
+
+    Collection<Element> priceper = html.SearchClass("ddsweb-price__subtext",
+        ELEMENT_BODY, true);
+
+    if (!priceper.size()) {
+        result.price_per_unit = PricePU { result.item_price, Unit::Piece };
+    } else {
+        string ppu_string = priceper[0].FirstChild().Text();
+        auto end_substr = ppu_string.find(' ');
+        if (end_substr == string::npos) end_substr = ppu_string.size();
+        std::string_view ppu_view(ppu_string.data(), end_substr);
+
+        result.price_per_unit = PricePU::FromString(ppu_view);
+    }
+
+    return result;
+}
