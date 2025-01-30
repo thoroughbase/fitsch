@@ -49,6 +49,8 @@ public:
     Result(ResultType rt, T* ptr, const Deleter<T>& ubdel = DEFAULT_DELETER<T>)
     : type(rt), data(ptr), deleter(std::bind(ubdel, ptr)) {}
 
+    Result(ResultType rt, std::nullptr_t ptr) : type(rt) {}
+
     Result(const Result&) = delete;
     Result& operator=(const Result&) = delete;
 

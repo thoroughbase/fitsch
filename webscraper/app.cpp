@@ -23,6 +23,11 @@ static void PrintProduct(const std::vector<Result>& results, App* app, const str
         return;
     }
 
+    if (results[0].Type() == GENERIC_ERROR) {
+        Log(WARNING, "Error whilst fetching/parsing product at URL {}", url);
+        return;
+    }
+
     auto& product = results[0].Get<Product>();
 
     fmt::print("Product at URL `{}`:\n  {}: {} [{}]\n", url, product.name,
@@ -70,7 +75,10 @@ static Result TC_GetProduct_Parse(TaskContext ctx, const Store* store, const str
 {
     HTML html(data);
 
-    return { GENERIC_VALID, new Product(store->GetProductAtURL(html)) };
+    std::optional<Product> product = store->GetProductAtURL(html);
+    if (!product) return { GENERIC_ERROR, nullptr };
+
+    return { GENERIC_VALID, new Product(std::move(*product)) };
 }
 
 static Result TC_GetProduct_Fetch(TaskContext ctx, App* app, const string& url,

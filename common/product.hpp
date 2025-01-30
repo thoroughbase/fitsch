@@ -70,8 +70,6 @@ struct Product
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Product, name, description, image_url, url, id,
     item_price, price_per_unit, store, timestamp, full_info);
 
-const Product PRODUCT_ERROR = {"error"};
-
 struct QueryResultInfo
 {
     int relevance; // What place an item appears at for a particular search term

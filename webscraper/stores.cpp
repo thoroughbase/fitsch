@@ -6,7 +6,7 @@
 
 // SuperValu
 
-Product SV_GetProductAtURL(const HTML& html)
+std::optional<Product> SV_GetProductAtURL(const HTML& html)
 {
     Collection<Element> metatags = html.SearchTag("meta", ELEMENT_HEAD);
 
@@ -142,7 +142,7 @@ string TE_GetProductSearchURL(std::string_view query)
     return {};
 }
 
-Product TE_GetProductAtURL(const HTML& html)
+std::optional<Product> TE_GetProductAtURL(const HTML& html)
 {
     Collection<Element> product_json = html.SearchAttr("type", "application/ld+json",
         ELEMENT_HEAD, false);
@@ -150,7 +150,7 @@ Product TE_GetProductAtURL(const HTML& html)
     if (!product_json.size()) {
         Log(WARNING, "Product information not found for Tesco product page - "
                      "element not found");
-        return PRODUCT_ERROR;
+        return {};
     }
 
     json root_json_obj = json::parse(product_json[0].FirstChild().Text());
@@ -162,7 +162,7 @@ Product TE_GetProductAtURL(const HTML& html)
     if (iterator == graph.end()) {
         Log(WARNING, "Product information not found for Tesco product page - "
                      "JSON obj not found");
-        return PRODUCT_ERROR;
+        return {};
     }
 
     json& product_info = *iterator;

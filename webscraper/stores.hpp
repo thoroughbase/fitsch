@@ -2,6 +2,7 @@
 
 #include <string>
 #include <string_view>
+#include <optional>
 
 #include "common/product.hpp"
 #include "webscraper/html.hpp"
@@ -16,19 +17,19 @@ struct Store
 
     ProductList (*ParseProductSearch)(std::string_view, int);
     string (*GetProductSearchURL)(std::string_view);
-    Product (*GetProductAtURL)(const HTML&);
+    std::optional<Product> (*GetProductAtURL)(const HTML&);
 };
 
 // See stores.md
 // SuperValu
 ProductList SV_ParseProductSearch(std::string_view data, int depth=0);
 string SV_GetProductSearchURL(std::string_view query);
-Product SV_GetProductAtURL(const HTML& html);
+std::optional<Product> SV_GetProductAtURL(const HTML& html);
 
 // Tesco
 ProductList TE_ParseProductSearch(std::string_view data, int depth=0);
 string TE_GetProductSearchURL(std::string_view query);
-Product TE_GetProductAtURL(const HTML& html);
+std::optional<Product> TE_GetProductAtURL(const HTML& html);
 
 namespace stores
 {
