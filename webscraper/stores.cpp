@@ -10,7 +10,10 @@ std::optional<Product> SV_GetProductAtURL(const HTML& html)
 {
     Collection<Element> metatags = html.SearchTag("meta", ELEMENT_HEAD);
 
-    Product result { .store = stores::SuperValu.id };
+    Product result {
+        .store = stores::SuperValu.id,
+        .timestamp = std::time(nullptr),
+    };
 
     for (Element e : metatags) {
         if (!e.HasAttr("itemprop")) continue;
@@ -26,6 +29,8 @@ std::optional<Product> SV_GetProductAtURL(const HTML& html)
             result.description = content;
         } else if (property == "sku") {
             result.id = stores::SuperValu.prefix + content;
+            result.url = fmt::format("{}/product/{}", stores::SuperValu.homepage,
+                                     content);
         } else if (property == "price") {
             result.item_price = Price::FromString(content);
         }
@@ -169,12 +174,16 @@ std::optional<Product> TE_GetProductAtURL(const HTML& html)
 
     unsigned int price = product_info["offers"]["price"].get<float>() * 100;
 
+    const std::string sku = product_info["sku"].get<string>();
+
     Product result = {
         .store = stores::Tesco.id, .name = product_info["name"],
         .description = product_info["description"],
-        .id = stores::Tesco.prefix + product_info["sku"].get<string>(),
+        .id = stores::Tesco.prefix + sku,
         .image_url = product_info["image"][0],
-        .item_price = Price { EUR, price }
+        .item_price = Price { EUR, price },
+        .timestamp = std::time(nullptr),
+        .url = fmt::format("{}/products/{}", stores::Tesco.homepage, sku)
     };
 
     Collection<Element> priceper = html.SearchClass("ddsweb-price__subtext",
