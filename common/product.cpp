@@ -12,13 +12,16 @@ const std::unordered_map<Currency, std::string_view> CURRENCY_SYMBOLS = {
 
 const std::unordered_map<std::string_view, std::pair<Unit, float>>
   UNIT_CONVERSIONS = {
-    { "kg",   { Unit::Kilogrammes, 1 } },
-    { "75cl", { Unit::Litres, 1 / 0.75f } },
-    { "70cl", { Unit::Litres, 1 / 0.7f } },
-    { "l",    { Unit::Litres, 1 } },
-    { "ml",   { Unit::Litres, 1000 } },
-    { "m²",   { Unit::SqMetres, 1 } },
-    { "each", { Unit::Piece, 1 } }
+    { "kg",     { Unit::Kilogrammes, 1 } },
+    { "75cl",   { Unit::Litres, 1 / 0.75f } },
+    { "70cl",   { Unit::Litres, 1 / 0.7f } },
+    { "l",      { Unit::Litres, 1 } },
+    { "litre",  { Unit::Litres, 1 } },
+    { "ml",     { Unit::Litres, 1000 } },
+    { "m²",     { Unit::SqMetres, 1 } },
+    { "each",   { Unit::Piece, 1 } },
+    { "100sht", { Unit::Piece, 0.01f } },
+    { "metre",  { Unit::Metres, 1 } }
 };
 
 // Price
@@ -111,7 +114,8 @@ PricePU PricePU::FromString(std::string_view str)
         }
     }
 
-    std::string_view unit_view(str.data() + delimiter + 1);
+    std::string_view unit_view = str;
+    unit_view.remove_prefix(delimiter + 1);
     std::string_view price_view(str.data(), delimiter);
 
     if (!UNIT_CONVERSIONS.contains(unit_view)) {

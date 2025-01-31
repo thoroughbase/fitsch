@@ -17,10 +17,8 @@ using std::string;
 enum StoreID { SUPERVALU, LIDL, TESCO, ALDI };
 enum Region { IE };
 
-// SuperValu price per unit types:
-// - "/kg", " each", "/75cl", "/70cl", "/l", "/ml", "/m²"
-enum Unit { None = 0, Piece = 1, Kilogrammes = 2, Litres = 3, SqMetres = 4 };
-inline const char* UNIT_SUFFIXES[] = { "", " each", "/kg", "/l", "/m²" };
+enum Unit { None = 0, Piece = 1, Kilogrammes = 2, Litres = 3, SqMetres = 4, Metres = 5 };
+inline const char* UNIT_SUFFIXES[] = { "", " each", "/kg", "/l", "/m²", "m" };
 
 enum Currency { EUR };
 
