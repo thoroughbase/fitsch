@@ -37,14 +37,14 @@ static void Libevent_InterruptCallback(int fd, short what, void* general_ctx)
     event_base_loopbreak(ctx->ebase);
 }
 
-static void Libevent_AddTransferCallback(int fd, short what, void* general_ctx)
+static void Libevent_AddTransferCallback(int fd, short what, void* handle_pair)
 {
-    GeneralCURLContext* ctx = (GeneralCURLContext*) general_ctx;
+    auto ctx = (std::pair<CURL*, EasyHandleInfo>*) handle_pair;
+    auto& [easy_handle_to_add, handle_info] = *ctx;
 
-    curl_multi_add_handle(ctx->multi_handle, ctx->easy_handle_to_add);
-
-    ctx->return_code = curl_multi_socket_action(ctx->multi_handle,
-        CURL_SOCKET_TIMEOUT, 0, &ctx->running_handles);
+    curl_multi_add_handle(handle_info.multi_handle, easy_handle_to_add);
+    int dummy;
+    curl_multi_socket_action(handle_info.multi_handle, CURL_SOCKET_TIMEOUT, 0, &dummy);
 }
 
 // CURL callbacks
@@ -137,18 +137,20 @@ CURLDriver::CURLDriver(int pool_size, std::string_view user_agent)
     curl_multi_setopt(multi_handle, CURLMOPT_TIMERDATA, &general_context);
 
     for (int i = 0; i < pool_size; ++i) {
-        easy_handles.emplace(curl_easy_init(), EasyHandleInfo {});
+        easy_handles.emplace(curl_easy_init(), EasyHandleInfo {
+            .multi_handle = multi_handle
+        });
     }
 
     // Separate for loop to avoid iterator invalidation from potential rehashing
     for (auto& [easy_handle, info] : easy_handles) {
+        info.add_transfer_event = event_new(general_context.ebase, -1, 0,
+            Libevent_AddTransferCallback, &(*easy_handles.find(easy_handle)));
+
         curl_easy_setopt(easy_handle, CURLOPT_WRITEFUNCTION, CURL_WriteData);
         curl_easy_setopt(easy_handle, CURLOPT_WRITEDATA, &info.buffer);
         curl_easy_setopt(easy_handle, CURLOPT_USERAGENT, user_agent.data());
     }
-
-    general_context.add_transfer_event = event_new(general_context.ebase, -1, 0,
-        Libevent_AddTransferCallback, &general_context);
 }
 
 CURLDriver::~CURLDriver()
@@ -165,11 +167,11 @@ CURLDriver::~CURLDriver()
 
     for (auto& [handle, info] : easy_handles) {
         curl_multi_remove_handle(general_context.multi_handle, handle);
+        event_free(info.add_transfer_event);
         curl_easy_cleanup(handle);
     }
 
     if (general_context.timer_event) event_free(general_context.timer_event);
-    event_free(general_context.add_transfer_event);
 
     curl_multi_cleanup(general_context.multi_handle);
     event_base_free(general_context.ebase);
@@ -227,8 +229,7 @@ void CURLDriver::PerformTransfer_NoLock(std::string_view url, TransferDoneCallba
 
     // Initiating transfers via a libevent callback ensures that CURL callbacks
     // are only ever triggered from one thread for thread-safety with no locks
-    general_context.easy_handle_to_add = easy_handle;
-    event_active(general_context.add_transfer_event, 0, 0);
+    event_active(handle_info->add_transfer_event, 0, 0);
 }
 
 void CURLDriver::PerformNextInQueue()
