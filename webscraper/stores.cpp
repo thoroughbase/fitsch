@@ -92,13 +92,11 @@ ProductList SV_ParseProductSearch(std::string_view data, int depth)
             continue;
         }
 
-        Node node = name_c[0].FirstChild();
-        std::string_view namestr;
-        do {
-            if (!((namestr = node.Text()).empty())) break;
-        } while ((node = node.Next()));
+        Node name_text_node = name_c[0].FindChildIf([] (const Node n) {
+            return !n.Text().empty();
+        });
 
-        if (namestr == BLANK) {
+        if (!name_text_node) {
             Log(WARNING, "Name not found for product {}", i);
             continue;
         }
@@ -108,7 +106,7 @@ ProductList SV_ParseProductSearch(std::string_view data, int depth)
 
         Product product {
             .store = stores::SuperValu.id,
-            .name { namestr },
+            .name { name_text_node.Text() },
             .item_price = Price::FromString(string(price_c[0].FirstChild().Text())),
             .price_per_unit = PricePU::FromString(price_per_c[0].FirstChild().Text()),
             .id = fmt::format("{}{}", stores::SuperValu.prefix, str_id),

@@ -56,6 +56,16 @@ public:
 
     Node FirstChild() const;
 
+    template<typename Callable>
+    Node FindChildIf(Callable&& predicate) const
+    {
+        Node n = FirstChild();
+        while (n) {
+            if (predicate(n)) return n;
+        }
+        return n;
+    }
+
     lxb_dom_element_t* Data() const;
 
     constexpr static auto collection_access = lxb_dom_collection_element;
