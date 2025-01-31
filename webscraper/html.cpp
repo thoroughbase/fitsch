@@ -6,7 +6,7 @@
 
 Node::Node(lxb_dom_node_t* node) : ptr(node) {}
 
-string Node::Text(bool deep) const
+std::string_view Node::Text(bool deep) const
 {
     if (!ptr || (ptr->type != LXB_DOM_NODE_TYPE_TEXT && !deep)) return BLANK;
     return (char*)lxb_dom_node_text_content(ptr, nullptr);
@@ -28,7 +28,7 @@ bool Element::HasAttr(std::string_view attrname) const
                                          attrname.size());
 }
 
-string Element::GetAttrValue(std::string_view attrname) const
+std::string_view Element::GetAttrValue(std::string_view attrname) const
 {
     lxb_dom_attr_t* attr;
     if (!(attr = lxb_dom_element_attr_by_name(ptr, (lxb_char_t*)attrname.data(),

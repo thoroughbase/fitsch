@@ -34,7 +34,7 @@ public:
     // Lexbor HTML, if asked to obtain the text content of a node, will traverse down
     // its children until text is reached if the original node is not text.
     // `deep` controls whether this behaviour is enabled or not.
-    string Text(bool deep=false) const;
+    std::string_view Text(bool deep=false) const;
     Node Next() const;
     operator bool() const;
 
@@ -52,7 +52,7 @@ public:
     Element(lxb_dom_element_t* element);
 
     bool HasAttr(std::string_view attrname) const;
-    string GetAttrValue(std::string_view attrname) const;
+    std::string_view GetAttrValue(std::string_view attrname) const;
 
     Node FirstChild() const;
 

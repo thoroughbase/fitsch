@@ -232,11 +232,11 @@ App::App(std::string_view cfg_path)
             std::string term = j.get<string>();
             delegator.QueueTasks(
                 { SendQuery, this, msg.src, term,
-                  StoreSelection { stores::SuperValu.id },
+                  StoreSelection { stores::SuperValu.id, stores::Tesco.id },
                   request_id
                 },
                 Task { TC_GetQueriesDB, this, term,
-                       StoreSelection { stores::SuperValu.id }, 10
+                       StoreSelection { stores::SuperValu.id, stores::Tesco.id }, 10
                 }
             );
         }
