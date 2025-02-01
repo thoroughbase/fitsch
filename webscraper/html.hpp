@@ -62,6 +62,7 @@ public:
         Node n = FirstChild();
         while (n) {
             if (predicate(n)) return n;
+            n = n.Next();
         }
         return n;
     }
