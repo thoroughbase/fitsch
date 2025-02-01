@@ -156,28 +156,28 @@ public:
 
     // Searching functions
     Collection<Element> SearchTag(std::string_view tag,
-                                  const Element& root=ELEMENT_NULL) const;
+                                  Element root=ELEMENT_NULL) const;
     void SearchTag(Collection<Element>& col, std::string_view tag,
-                   const Element& root=ELEMENT_NULL) const;
+                   Element root=ELEMENT_NULL) const;
 
     Collection<Element> SearchAttr(std::string_view attr, std::string_view val,
-                                   const Element& root=ELEMENT_NULL,
+                                   Element root=ELEMENT_NULL,
                                    bool broad=false) const;
     void SearchAttr(Collection<Element>& col, std::string_view attr, std::string_view val,
-                    const Element& root=ELEMENT_NULL, bool broad=false) const;
+                    Element root=ELEMENT_NULL, bool broad=false) const;
 
-    Collection<Element> SearchClass(std::string_view name, const Element& root=ELEMENT_NULL,
+    Collection<Element> SearchClass(std::string_view name, Element root=ELEMENT_NULL,
                                     bool broad=false) const;
     void SearchClass(Collection<Element>& col, std::string_view name,
-                     const Element& root=ELEMENT_NULL, bool broad=false) const;
+                     Element root=ELEMENT_NULL, bool broad=false) const;
 
 private:
-    lxb_dom_element_t* Resolve(const Element& e) const;
+    lxb_dom_element_t* Resolve(Element e) const;
 
     void _SearchTag(lxb_dom_collection_t* c, std::string_view tag,
-                    const Element& root=ELEMENT_NULL) const;
+                    Element root=ELEMENT_NULL) const;
     void _SearchAttr(lxb_dom_collection_t* c, std::string_view attr, std::string_view val,
-                     const Element& root=ELEMENT_NULL, bool broad=false) const;
+                    Element root=ELEMENT_NULL, bool broad=false) const;
 
     lxb_html_document_t* dom;
 };

@@ -74,7 +74,7 @@ lxb_html_document_t* HTML::Data() const { return dom; }
 // HTML searching functions
 
 Collection<Element> HTML::SearchTag(std::string_view tag,
-                              const Element& root) const
+                              Element root) const
 {
     Collection<Element> col(&(dom->dom_document), 16);
     _SearchTag(col.Data(), tag, root);
@@ -83,14 +83,14 @@ Collection<Element> HTML::SearchTag(std::string_view tag,
 }
 
 void HTML::SearchTag(Collection<Element>& col, std::string_view tag,
-               const Element& root) const
+               Element root) const
 {
     if (!col.Data()) col = Collection<Element>(&(dom->dom_document), 16);
     _SearchTag(col.Data(), tag, root);
 }
 
 void HTML::_SearchTag(lxb_dom_collection_t* c, std::string_view tag,
-                    const Element& root) const
+                    Element root) const
 {
     lxb_dom_element_t* rootptr = Resolve(root);
     lxb_dom_collection_clean(c);
@@ -103,7 +103,7 @@ void HTML::_SearchTag(lxb_dom_collection_t* c, std::string_view tag,
 }
 
 Collection<Element> HTML::SearchAttr(std::string_view attr, std::string_view val,
-                               const Element& root,
+                               Element root,
                                bool broad) const
 {
     Collection<Element> col(&(dom->dom_document), 16);
@@ -113,13 +113,13 @@ Collection<Element> HTML::SearchAttr(std::string_view attr, std::string_view val
 }
 
 void HTML::SearchAttr(Collection<Element>& col, std::string_view attr,
-                std::string_view val, const Element& root, bool broad) const
+                std::string_view val, Element root, bool broad) const
 {
     if (!col.Data()) col = Collection<Element>(&(dom->dom_document), 16);
     _SearchAttr(col.Data(), attr, val, root, broad);
 }
 
-Collection<Element> HTML::SearchClass(std::string_view name, const Element& root,
+Collection<Element> HTML::SearchClass(std::string_view name, Element root,
                                 bool broad) const
 {
     Collection<Element> col(&(dom->dom_document), 16);
@@ -129,13 +129,13 @@ Collection<Element> HTML::SearchClass(std::string_view name, const Element& root
 }
 
 void HTML::SearchClass(Collection<Element>& col, std::string_view name,
-                 const Element& root, bool broad) const
+                 Element root, bool broad) const
 {
     if (!col.Data()) col = Collection<Element>(&(dom->dom_document), 16);
     _SearchAttr(col.Data(), "class", name, root, broad);
 }
 
-lxb_dom_element_t* HTML::Resolve(const Element& e) const
+lxb_dom_element_t* HTML::Resolve(Element e) const
 {
     switch ((unsigned long) e.Data()) {
     case ELEMENT_NULL_VALUE: return lxb_dom_interface_element(dom);
@@ -146,7 +146,7 @@ lxb_dom_element_t* HTML::Resolve(const Element& e) const
 }
 
 void HTML::_SearchAttr(lxb_dom_collection_t* c, std::string_view attr,
-                  std::string_view val, const Element& root, bool broad) const
+                  std::string_view val, Element root, bool broad) const
 {
     lxb_dom_element_t* rootptr = Resolve(root);
     lxb_dom_collection_clean(c);
