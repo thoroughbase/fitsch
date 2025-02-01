@@ -25,5 +25,3 @@ void Log(LogLevel l, fmt::format_string<T...> format, T&&... args)
                fmt::localtime(std::time(nullptr)),
                fmt::vformat(format, fmt::make_format_args(args...)));
 }
-
-inline const string BLANK;
