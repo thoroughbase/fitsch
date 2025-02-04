@@ -7,6 +7,7 @@
 #include <mutex>
 #include <atomic>
 #include <type_traits>
+#include <memory>
 
 struct TaskContext;
 struct Result;
@@ -16,13 +17,7 @@ class Delegator;
 using TaskCallback = std::function<Result(TaskContext)>;
 using ResultCallback = std::function<void(const std::vector<Result>&)>;
 
-template<typename T>
-using Deleter = std::function<void(T*)>;
-
 using BoundDeleter = std::function<void()>;
-
-template<typename T>
-inline const auto DEFAULT_DELETER = [] (T* ptr) { delete ptr; };
 
 enum ResultType
 {
@@ -45,9 +40,9 @@ struct Result
 public:
     Result() = default;
 
-    template<typename T>
-    Result(ResultType rt, T* ptr, const Deleter<T>& ubdel = DEFAULT_DELETER<T>)
-    : type(rt), data(ptr), deleter(std::bind(ubdel, ptr)) {}
+    template<typename T, typename Deleter = std::default_delete<T>>
+    Result(ResultType rt, T* ptr, Deleter&& ubdel = std::default_delete<T>{})
+    : type(rt), data(ptr), deleter(std::bind(std::forward<Deleter>(ubdel), ptr)) {}
 
     Result(ResultType rt, std::nullptr_t ptr) : type(rt) {}
 
