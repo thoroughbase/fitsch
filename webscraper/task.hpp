@@ -59,8 +59,8 @@ public:
     ~Result();
 
 private:
-    void* data = nullptr;
     ResultType type = EMPTY;
+    void* data = nullptr;
     BoundDeleter deleter = nullptr;
 };
 

@@ -1,21 +1,21 @@
 #include "webscraper/task.hpp"
 
 #include <thread>
+#include <utility>
 
 // Result
 
-Result::Result(Result&& other) noexcept : deleter(std::move(other.deleter)),
-    data(other.data), type(other.type)
+Result::Result(Result&& other) noexcept : type(other.type),
+    deleter(std::move(other.deleter))
 {
-    other.data = nullptr;
+    data = std::exchange(other.data, nullptr);
 }
 
 Result& Result::operator=(Result&& other) noexcept
 {
-    deleter = std::move(other.deleter);
-    data = other.data;
     type = other.type;
-    other.data = nullptr;
+    data = std::exchange(other.data, nullptr);
+    deleter = std::move(other.deleter);
 
     return *this;
 }
