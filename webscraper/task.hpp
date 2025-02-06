@@ -74,7 +74,7 @@ struct ResultsContainer
 struct TaskContext
 {
     unsigned group_id;
-    Delegator* delegator;
+    Delegator& delegator;
 };
 
 struct UnboundResultCallback
@@ -90,11 +90,11 @@ struct UnboundResultCallback
 struct ExternalTaskHandle
 {
 public:
-    ExternalTaskHandle(Delegator* delegator, unsigned id);
+    ExternalTaskHandle(Delegator& delegator, unsigned id);
 
     void Finish(Result&& result) const;
 private:
-    Delegator* delegator;
+    Delegator& delegator;
     unsigned group_id;
 };
 

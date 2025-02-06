@@ -26,12 +26,12 @@ Result::~Result() { if (deleter && data) deleter(); }
 
 // ExternalTaskHandle
 
-ExternalTaskHandle::ExternalTaskHandle(Delegator* d, unsigned gid)
+ExternalTaskHandle::ExternalTaskHandle(Delegator& d, unsigned gid)
     : delegator(d), group_id(gid) {}
 
 void ExternalTaskHandle::Finish(Result&& result) const
 {
-    delegator->ProcessResult(group_id, std::move(result));
+    delegator.ProcessResult(group_id, std::move(result));
 }
 
 // Delegator
@@ -62,7 +62,7 @@ ExternalTaskHandle Delegator::QueueExternalTask(UnboundResultCallback&& ub_rcb)
         .result_cb = std::move(ub_rcb.result_cb)
     });
 
-    return { this, current_group_id };
+    return { *this, current_group_id };
 }
 
 ExternalTaskHandle Delegator::QueueExtraExternalTask(unsigned id)
@@ -72,7 +72,7 @@ ExternalTaskHandle Delegator::QueueExtraExternalTask(unsigned id)
     auto& [key, container_ref] = *(results.find(id));
     ++container_ref.expecting;
 
-    return { this, id };
+    return { *this, id };
 }
 
 void Delegator::TryRun(unsigned id, Task&& task)
@@ -86,7 +86,7 @@ void Delegator::TryRun(unsigned id, Task&& task)
     ++running_tasks;
 
     std::thread thread([this] (Task&& task) {
-        Result result = task.task_cb(TaskContext { task.group_id, this });
+        Result result = task.task_cb(TaskContext { task.group_id, *this });
         ProcessResult(task.group_id, std::move(result));
 
         --running_tasks;

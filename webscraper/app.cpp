@@ -84,10 +84,10 @@ static Result TC_GetProduct_Parse(TaskContext ctx, const Store* store, const str
 static Result TC_GetProduct_Fetch(TaskContext ctx, App* app, const string& url,
     const Store* store)
 {
-    auto handle = ctx.delegator->QueueExtraExternalTask(ctx.group_id);
+    auto handle = ctx.delegator.QueueExtraExternalTask(ctx.group_id);
     app->curl_driver->PerformTransfer(url, [handle, ctx, store] (auto data, auto url,
         CURLcode code) {
-        ctx.delegator->QueueExtraTasks(ctx.group_id,
+        ctx.delegator.QueueExtraTasks(ctx.group_id,
             Task { TC_GetProduct_Parse, store, string(data) }
         );
         handle.Finish({});
@@ -113,11 +113,11 @@ static Result TC_DoQuery(TaskContext ctx, App* app, const string& query_string,
         const Store* store = app->GetStore(id);
         string url = store->GetProductSearchURL(query_string);
 
-        auto handle = ctx.delegator->QueueExtraExternalTask(ctx.group_id);
+        auto handle = ctx.delegator.QueueExtraExternalTask(ctx.group_id);
 
         app->curl_driver->PerformTransfer(url,
         [handle, ctx, store, depth] (auto data, auto url, CURLcode code) {
-            ctx.delegator->QueueExtraTasks(ctx.group_id,
+            ctx.delegator.QueueExtraTasks(ctx.group_id,
                 Task { TC_DoQuery_Parse, store, string(data), depth }
             );
             handle.Finish({});
@@ -176,7 +176,7 @@ static Result TC_GetQueriesDB(TaskContext ctx, App* app, const string& query_str
 
     if (missing.size()) {
         // Queue tasks to retrieve missing info
-        ctx.delegator->QueueExtraTasks(ctx.group_id,
+        ctx.delegator.QueueExtraTasks(ctx.group_id,
             Task { TC_DoQuery, app, query_string, missing, depth }
         );
     }
