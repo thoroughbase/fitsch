@@ -25,9 +25,9 @@ enum Currency { EUR };
 struct Price
 {
     string ToString() const;
-	static Price FromString(string str);
+    static Price FromString(string str);
 
-	std::partial_ordering operator<=>(const Price& other) const;
+    std::partial_ordering operator<=>(const Price& other) const;
     Price operator*(float b) const;
 
     Currency currency = EUR;
@@ -90,14 +90,14 @@ inline const int SEARCH_DEPTH_INDEFINITE = -1;
 
 struct ProductList
 {
-	ProductList(int depth = SEARCH_DEPTH_INDEFINITE);
+    ProductList(int depth = SEARCH_DEPTH_INDEFINITE);
 
-	void Add(const ProductList& other);
+    void Add(const ProductList& other);
 
     QueryTemplate AsQueryTemplate(const string& querystr, const StoreSelection& ids)
         const;
     std::vector<Product> AsProductVector() const;
 
-	std::vector<std::pair<Product, QueryResultInfo>> products;
-	int depth;
+    std::vector<std::pair<Product, QueryResultInfo>> products;
+    int depth;
 };

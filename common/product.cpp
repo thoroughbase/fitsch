@@ -43,7 +43,7 @@ string Price::ToString() const
 
 Price Price::FromString(string str)
 {
-	Price price;
+    Price price;
     size_t comma;
     if ((comma = str.find(',')) != string::npos)
         str.erase(comma, 1);
@@ -129,8 +129,8 @@ PricePU PricePU::FromString(std::string_view str)
 
 std::partial_ordering PricePU::operator<=>(const PricePU& other) const
 {
-	if (unit != other.unit) return std::partial_ordering::unordered;
-	return price <=> other.price;
+    if (unit != other.unit) return std::partial_ordering::unordered;
+    return price <=> other.price;
 }
 
 void to_json(json& j, const PricePU& p)
@@ -152,11 +152,11 @@ void ProductList::Add(const ProductList& other)
 {
     products.insert(products.end(), other.products.begin(), other.products.end());
     if (depth == SEARCH_DEPTH_INDEFINITE && other.depth != depth) {
-    	depth = other.depth;
-    	return;
+        depth = other.depth;
+        return;
     }
     if (other.depth < depth && other.depth != SEARCH_DEPTH_INDEFINITE)
-    	depth = other.depth;
+        depth = other.depth;
 }
 
 QueryTemplate ProductList::AsQueryTemplate(const string& querystr,
