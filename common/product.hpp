@@ -18,7 +18,7 @@ enum StoreID { SUPERVALU, LIDL, TESCO, ALDI, DUNNES_STORES };
 enum Region { IE };
 
 enum Unit { None = 0, Piece = 1, Kilogrammes = 2, Litres = 3, SqMetres = 4, Metres = 5 };
-inline const char* UNIT_SUFFIXES[] = { "", " each", "/kg", "/l", "/m²", "m" };
+constexpr const char* UNIT_SUFFIXES[] = { "", " each", "/kg", "/l", "/m²", "m" };
 
 enum Currency { EUR };
 
@@ -86,7 +86,7 @@ struct QueryTemplate
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(QueryTemplate, query_string, stores, results,
     timestamp, depth);
 
-inline const int SEARCH_DEPTH_INDEFINITE = -1;
+constexpr int SEARCH_DEPTH_INDEFINITE = -1;
 
 struct ProductList
 {
