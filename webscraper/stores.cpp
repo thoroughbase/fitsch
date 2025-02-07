@@ -234,7 +234,7 @@ std::optional<Product> TE_GetProductAtURL(const HTML& html)
     Product result = {
         .store = stores::Tesco.id, .name = product_info["name"],
         .description = product_info["description"],
-        .id = stores::Tesco.prefix + sku,
+        .id = fmt::format("{}{}", stores::Tesco.prefix, sku),
         .image_url = product_info["image"][0],
         .item_price = Price { EUR, price },
         .timestamp = std::time(nullptr),

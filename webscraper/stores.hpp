@@ -12,7 +12,7 @@ using std::string;
 struct Store
 {
     StoreID id;
-    string name, prefix, homepage, root_url;
+    std::string_view name, prefix, homepage, root_url;
     Region region;
 
     ProductList (*ParseProductSearch)(std::string_view, int);
@@ -34,7 +34,7 @@ std::optional<Product> TE_GetProductAtURL(const HTML& html);
 namespace stores
 {
 
-inline const Store SuperValu =
+constexpr Store SuperValu =
 {
     .id = SUPERVALU, .name = "SuperValu", .prefix = "SV",
     .homepage = "https://shop.supervalu.ie/sm/delivery/rsid/5550",
@@ -45,7 +45,7 @@ inline const Store SuperValu =
     .ParseProductSearch = SV_ParseProductSearch
 };
 
-inline const Store Tesco = {
+constexpr Store Tesco = {
     .id = TESCO, .name = "Tesco", .prefix = "TE",
     .homepage = "https://www.tesco.ie/groceries/en-IE",
     .root_url = "https://www.tesco.ie",
