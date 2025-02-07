@@ -14,7 +14,7 @@
 using nlohmann::json;
 using std::string;
 
-enum StoreID { SUPERVALU, LIDL, TESCO, ALDI };
+enum StoreID { SUPERVALU, LIDL, TESCO, ALDI, DUNNES_STORES };
 enum Region { IE };
 
 enum Unit { None = 0, Piece = 1, Kilogrammes = 2, Litres = 3, SqMetres = 4, Metres = 5 };

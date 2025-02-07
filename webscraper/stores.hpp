@@ -31,6 +31,11 @@ ProductList TE_ParseProductSearch(std::string_view data, int depth=0);
 string TE_GetProductSearchURL(std::string_view query);
 std::optional<Product> TE_GetProductAtURL(const HTML& html);
 
+// Dunnes Stores
+ProductList DS_ParseProductSearch(std::string_view data, int depth=0);
+string DS_GetProductSearchURL(std::string_view query);
+std::optional<Product> DS_GetProductAtURL(const HTML& html);
+
 namespace stores
 {
 
@@ -53,6 +58,16 @@ constexpr Store Tesco = {
     .GetProductSearchURL = TE_GetProductSearchURL,
     .GetProductAtURL = TE_GetProductAtURL,
     .ParseProductSearch = TE_ParseProductSearch
+};
+
+constexpr Store DunnesStores = {
+    .id = DUNNES_STORES, .name = "Dunnes Stores", .prefix = "DS",
+    .homepage = "https://www.dunnesstoresgrocery.com",
+    .root_url = "https://www.dunnesstoresgrocery.com",
+    .region = IE,
+    .GetProductSearchURL = DS_GetProductSearchURL,
+    .GetProductAtURL = DS_GetProductAtURL,
+    .ParseProductSearch = DS_ParseProductSearch
 };
 
 }

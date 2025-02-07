@@ -183,3 +183,10 @@ and may be absent for the same reasons as the item price.
 
 The image URL is contained in an `<img>` element of class `product-image`, which
 is a child of a `<div>` element of class `product-image__container`.
+
+## Dunnes Stores
+
+Last updated: 7th February 2025
+
+The layout of information for both single product and search pages is identical
+to that of SuperValu's.

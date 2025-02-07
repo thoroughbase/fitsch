@@ -228,16 +228,16 @@ App::App(std::string_view cfg_path)
                         const buxtehude::Message& msg) {
         if (!buxtehude::ValidateJSON(msg.content, validate::QUERY)) return;
         int request_id = msg.content["request-id"];
+        StoreSelection stores {
+            stores::SuperValu.id,
+            stores::Tesco.id,
+            stores::DunnesStores.id
+        };
         for (const json& j : msg.content["terms"]) {
             std::string term = j.get<string>();
             delegator.QueueTasks(
-                { SendQuery, this, msg.src, term,
-                  StoreSelection { stores::SuperValu.id, stores::Tesco.id },
-                  request_id
-                },
-                Task { TC_GetQueriesDB, this, term,
-                       StoreSelection { stores::SuperValu.id, stores::Tesco.id }, 10
-                }
+                { SendQuery, this, msg.src, term, stores, request_id },
+                Task { TC_GetQueriesDB, this, term, stores, 10 }
             );
         }
     });
