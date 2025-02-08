@@ -13,6 +13,7 @@ const std::unordered_map<Currency, std::string_view> CURRENCY_SYMBOLS = {
 const std::unordered_map<std::string_view, std::pair<Unit, float>>
   UNIT_CONVERSIONS = {
     { "kg",     { Unit::Kilogrammes, 1 } },
+    { "g",      { Unit::Kilogrammes, 1000 } },
     { "75cl",   { Unit::Litres, 1 / 0.75f } },
     { "70cl",   { Unit::Litres, 1 / 0.7f } },
     { "l",      { Unit::Litres, 1 } },
