@@ -29,8 +29,8 @@ public:
 
 private:
     std::unordered_map<int, RequestInfo> pending_queries;
-    std::string webscraper_name;
     buxtehude::Client* bclient;
+    std::string webscraper_name;
 
     std::atomic<int> request_id = 0;
 };

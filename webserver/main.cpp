@@ -15,6 +15,11 @@ int main()
     crow::SimpleApp crow_app;
     crow_app.loglevel(crow::LogLevel::Warning);
 
+    buxtehude::Initialise(
+    [] (buxtehude::LogLevel level, const std::string& message) {
+        Log((LogLevel) level, "{}", message);
+    });
+
     auto bclient = std::make_unique<buxtehude::Client>();
     bclient->preferences.format = buxtehude::MSGPACK;
 
@@ -32,7 +37,7 @@ int main()
     });
 
     CROW_ROUTE(crow_app, "/search/<string>")
-    ([&bclient, &query_handler] (const std::string& term) {
+    ([&query_handler] (const std::string& term) {
         int unescaped_len;
         char* curl_str = curl_easy_unescape(nullptr, term.data(), term.size(),
             &unescaped_len);
