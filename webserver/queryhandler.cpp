@@ -8,10 +8,10 @@
 
 using nlohmann::json;
 
-QueryHandler::QueryHandler(buxtehude::Client* bclient, std::string_view webscraper)
+QueryHandler::QueryHandler(buxtehude::Client& bclient, std::string_view webscraper)
     : bclient(bclient), webscraper_name(webscraper)
 {
-    bclient->AddHandler("query-result", [this] (buxtehude::Client& cl,
+    bclient.AddHandler("query-result", [this] (buxtehude::Client& cl,
         const buxtehude::Message& msg) {
         if (!buxtehude::ValidateJSON(msg.content, validate::QUERY_RESULT)) {
             Log(WARNING, "Invalid query-result message received!");
@@ -47,7 +47,7 @@ std::future<QueryResultsMap> QueryHandler::SendQuery(std::string_view query)
 
     request_info.results.emplace(query, std::vector<Product> {});
 
-    bclient->Write({
+    bclient.Write({
         .dest = webscraper_name, .type = "query", .only_first = true,
         .content = {
             { "terms", json::array({ query }) },

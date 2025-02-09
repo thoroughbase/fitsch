@@ -28,7 +28,7 @@ int main()
         return 1;
     }
 
-    QueryHandler query_handler(bclient.get(), "webscraper");
+    QueryHandler query_handler(*bclient.get(), "webscraper");
 
     bclient->Run();
 
