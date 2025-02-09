@@ -189,7 +189,7 @@ static Result TC_GetQueriesDB(TaskContext ctx, App* app, const string& query_str
 App::App(std::string_view cfg_path)
 {
     CURLDriver::GlobalInit();
-    buxtehude::Initialise([] (buxtehude::LogLevel l, const string& msg) {
+    buxtehude::Initialise([] (buxtehude::LogLevel l, std::string_view msg) {
         Log((LogLevel)l, "(buxtehude) {}", msg);
     });
 

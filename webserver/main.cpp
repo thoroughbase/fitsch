@@ -16,7 +16,7 @@ int main()
     crow_app.loglevel(crow::LogLevel::Warning);
 
     buxtehude::Initialise(
-    [] (buxtehude::LogLevel level, const std::string& message) {
+    [] (buxtehude::LogLevel level, std::string_view message) {
         Log((LogLevel) level, "{}", message);
     });
 
