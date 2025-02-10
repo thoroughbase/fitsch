@@ -8,6 +8,7 @@
 #include "webserver/queryhandler.hpp"
 
 #include <chrono>
+#include <ranges>
 
 int main()
 {
@@ -60,7 +61,7 @@ int main()
         QueryResultsMap result_map = future.get();
         std::vector<Product>& products = result_map.at(unescaped_term.data());
 
-        std::sort(products.begin(), products.end(),
+        std::ranges::sort(products,
             [] (auto& a, auto& b) {
                 auto cmp = a.price_per_unit <=> b.price_per_unit;
                 if (cmp == std::partial_ordering::unordered)

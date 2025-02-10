@@ -24,24 +24,25 @@ bool Database::Connect(const mongocxx::uri& uri)
     return valid;
 }
 
-std::vector<Product> Database::GetProducts(std::vector<string>& ids)
+std::vector<Product> Database::GetProducts(std::span<const string> ids)
 {
     return Get<Product>("products", "id", ids);
 }
 
-std::vector<QueryTemplate> Database::GetQueryTemplates(std::vector<string>& str)
+std::vector<QueryTemplate> Database::GetQueryTemplates(
+    std::span<const string> search_terms)
 {
-    return Get<QueryTemplate>("queries", "query_string", str);
+    return Get<QueryTemplate>("queries", "query_string", search_terms);
 }
 
-void Database::PutProducts(const std::vector<Product>& product)
+void Database::PutProducts(std::span<const Product> products)
 {
-    Put<Product>("products", "id", product);
+    Put<Product>("products", "id", products);
 }
 
-void Database::PutQueryTemplates(const std::vector<QueryTemplate>& q)
+void Database::PutQueryTemplates(std::span<const QueryTemplate> query_templates)
 {
-    Put<QueryTemplate>("queries", "query_string", q);
+    Put<QueryTemplate>("queries", "query_string", query_templates);
 }
 
 bool Database::Ping()

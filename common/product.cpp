@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <ctime>
+#include <ranges>
 
 // Constant hash-maps
 
@@ -160,27 +161,23 @@ void ProductList::Add(const ProductList& other)
         depth = other.depth;
 }
 
-QueryTemplate ProductList::AsQueryTemplate(const string& querystr,
+QueryTemplate ProductList::AsQueryTemplate(std::string_view querystr,
                                            const StoreSelection& ids) const
 {
-    QueryTemplate tmpl { .query_string = querystr, .stores = ids,
-                         .timestamp = std::time(nullptr), .depth = depth };
+    QueryTemplate q_template {
+        .query_string { querystr }, .stores { ids },
+        .timestamp = std::time(nullptr), .depth = depth
+    };
 
-    tmpl.results.reserve(products.size());
+    q_template.results.reserve(products.size());
 
-    for (auto it = products.begin(); it != products.end(); ++it)
-        tmpl.results.emplace((*it).first.id, (*it).second);
+    for (const auto& [product, relevance] : products)
+        q_template.results.emplace(product.id, relevance);
 
-    return tmpl;
+    return q_template;
 }
 
 std::vector<Product> ProductList::AsProductVector() const
 {
-    std::vector<Product> r;
-    r.reserve(products.size());
-
-    for (auto it = products.begin(); it != products.end(); ++it)
-        r.push_back((*it).first);
-
-    return r;
+    return std::views::keys(products) | tb::range_to<std::vector<Product>>();
 }

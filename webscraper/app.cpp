@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <cstdlib>
+#include <ranges>
 
 #include <fmt/format.h>
 #include <fmt/core.h>
@@ -33,7 +34,7 @@ static void PrintProduct(const std::vector<Result>& results, App* app, const str
     fmt::print("Product at URL `{}`:\n  {}: {} [{}]\n", url, product.name,
                product.item_price.ToString(), product.price_per_unit.ToString());
 
-    app->database.PutProducts({product});
+    app->database.PutProducts(tb::make_span({ product }));
 }
 
 static void SendQuery(const std::vector<Result>& results, App* app, const string& dest,
@@ -64,7 +65,7 @@ static void SendQuery(const std::vector<Result>& results, App* app, const string
     if (upload) {
         Log(DEBUG, "Uploading query {}", query_string);
         auto qt = list.AsQueryTemplate(query_string, stores);
-        app->database.PutQueryTemplates({ qt });
+        app->database.PutQueryTemplates(tb::make_span({ qt }));
         if (!list.products.empty()) app->database.PutProducts(products);
     }
 }
@@ -131,9 +132,8 @@ static Result TC_GetQueriesDB(TaskContext ctx, App* app, const string& query_str
     const StoreSelection& stores, int depth)
 {
     // Get query template stored in database
-    std::vector<string> queries = { std::string(query_string) };
     ProductList list(depth);
-    auto qt = app->database.GetQueryTemplates(queries);
+    auto qt = app->database.GetQueryTemplates(tb::make_span({ query_string }));
 
     StoreSelection missing;
     // Check if query is "complete" i.e. has the information we're looking for
@@ -150,24 +150,20 @@ static Result TC_GetQueriesDB(TaskContext ctx, App* app, const string& query_str
             missing = stores;
         } else {
             // Are all the stores that we asked for there?
-            if (!std::includes(q.stores.begin(), q.stores.end(),
-                               stores.begin(), stores.end())) {
+            if (!std::ranges::includes(q.stores, stores)) {
                 missing = stores;
                 // Just redo the missing ones
-                for (const StoreID id : q.stores) std::erase(missing, id);
+                for (StoreID id : q.stores) std::erase(missing, id);
             }
 
             // Retrieve products from database as well
-            std::vector<string> ids;
-            ids.reserve(q.results.size());
-            for (const auto& [id, info] : q.results)
-                if (!(depth > 0 && info.relevance >= depth)) // Relevant?
-                    ids.push_back(id);
-
-            auto products = app->database.GetProducts(ids);
-            if (ids.size()) {
-                // TODO: Handle certain products not being found
-            }
+            auto relevant_ids = std::views::keys(
+                q.results | std::views::filter([depth] (auto& pair) {
+                    auto& [id, info] = pair;
+                    return !(depth > 0 && info.relevance >= depth);
+                })
+            ) | tb::range_to<std::vector<string>>();
+            auto products = app->database.GetProducts(relevant_ids);
 
             for (auto& p : products)
                 list.products.emplace_back(std::move(p), q.results.at(p.id));

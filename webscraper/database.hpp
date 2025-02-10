@@ -25,10 +25,9 @@ public:
     Database(const mongocxx::uri& uri);
     bool Connect(const mongocxx::uri& uri);
 
-    // Modify input by removing search terms that have been found
     template<typename T>
-    std::vector<T> Get(const string& cl, std::string_view field,
-                       std::vector<string>& terms)
+    std::vector<T> Get(const string& collection_name, std::string_view field,
+                       std::span<const string> terms)
     {
         if (!valid) {
             Log(WARNING, "Not connected to database, could not get documents");
@@ -37,7 +36,7 @@ public:
 
         auto client = pool->acquire();
         mongocxx::database db = (*client)["fitsch"];
-        auto collection = db.collection(cl);
+        auto collection = db.collection(collection_name);
 
         json search_term = {
             { field, {{ "$in", terms }} }
@@ -50,19 +49,18 @@ public:
 
             for (auto& r : results) {
                 json j = json::parse(bsoncxx::to_json(r));
-                std::erase(terms, j[field].get<string>());
                 matches.emplace_back(j.get<T>());
             }
         } catch (const std::exception& e) {
             Log(WARNING, "Error searching with term `{}`: {}", search_term.dump(),
                 e.what());
-            return matches;
         }
         return matches;
     }
 
     template<typename T>
-    void Put(const string& cl, std::string_view field, const std::vector<T>& items)
+    void Put(const string& collection_name, std::string_view field,
+             std::span<const T> items)
     {
         if (!valid) {
             Log(WARNING, "Not connected to database, could not put documents");
@@ -73,20 +71,17 @@ public:
 
         auto client = pool->acquire();
         mongocxx::database db = (*client)["fitsch"];
-        auto collection = db.collection(cl);
+        auto collection = db.collection(collection_name);
 
-        std::vector<bsoncxx::document::value> docs;
-        std::vector<string> removals;
+        auto removals =
+            items | std::views::transform([field] (const json& item) {
+                return item[field].get<string>();
+            }) | tb::range_to<std::vector<string>>();
 
-        docs.reserve(items.size());
-        removals.reserve(items.size());
-
-        for (auto& i : items) {
-            json j = i;
-
-            docs.emplace_back(bsoncxx::from_json(j.dump()));
-            removals.emplace_back(j[field].get<string>());
-        }
+        auto docs =
+            items | std::views::transform([] (const json& item) {
+                return bsoncxx::from_json(item.dump());
+            }) | tb::range_to<std::vector<bsoncxx::document::value>>();
 
         json remove_command = {
             { field, {{ "$in", removals }} }
@@ -100,11 +95,11 @@ public:
         }
     }
 
-    std::vector<Product> GetProducts(std::vector<string>& id);
-    std::vector<QueryTemplate> GetQueryTemplates(std::vector<string>& search_terms);
+    std::vector<Product> GetProducts(std::span<const string> id);
+    std::vector<QueryTemplate> GetQueryTemplates(std::span<const string> search_terms);
 
-    void PutProducts(const std::vector<Product>& product);
-    void PutQueryTemplates(const std::vector<QueryTemplate>& q);
+    void PutProducts(std::span<const Product> products);
+    void PutQueryTemplates(std::span<const QueryTemplate> query_templates);
 
     bool Ping();
 

@@ -94,8 +94,8 @@ struct ProductList
 
     void Add(const ProductList& other);
 
-    QueryTemplate AsQueryTemplate(const string& querystr, const StoreSelection& ids)
-        const;
+    QueryTemplate AsQueryTemplate(std::string_view querystr,
+                                  const StoreSelection& ids) const;
     std::vector<Product> AsProductVector() const;
 
     std::vector<std::pair<Product, QueryResultInfo>> products;
