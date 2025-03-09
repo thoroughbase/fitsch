@@ -84,7 +84,8 @@ int main()
 
         crow::mustache::context ctx {{
             { "term", std::move(non_lowercase) },
-            { "item_listings", names }
+            { "item_listings", names },
+            { "item_count", static_cast<uint64_t>(names.size()) }
         }};
 
         curl_easy_cleanup(curl_str);

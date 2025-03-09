@@ -4,7 +4,7 @@ body {
     font-family: "Open Sans", serif;
 }
 
-body h2 {
+body h3 {
     margin-left: 1.5%;
 }
 
@@ -13,16 +13,16 @@ body h2 {
     font-family: "Open Sans", serif;
     font-weight: normal;
     font-size: 40px;
+    height: 56px;
     background-color: #5555aa;
-    border-top: 0px;
-    border-left: 0px;
-    border-right: 0px;
-    border-bottom: 1px;
+    border: 0px;
+    box-shadow: 0px 2px 2px #66669a;
     border-style: solid;
+    display: flex;
 }
 
 .banner p {
-    text-align: center;
+    text-align: left;
     float: left;
     margin-left: 3%;
     margin-top: 0%;
@@ -57,4 +57,44 @@ body h2 {
 
 .item-listing {
     margin-left: 5%;
+}
+
+#search-field {
+    font-family: "Open Sans", serif;
+    border-top-left-radius: 32px;
+    border-bottom-left-radius: 32px;
+    font-size: 20px;
+    border: 1px;
+    border-right: 0px;
+    border-style: solid;
+    border-color: #33a;
+    padding-left: 16px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    background-color: #fafaff;
+    position: absolute;
+    left: 33%;
+    top: 8px;
+    bottom: 8px;
+    height: 40px;
+    width: 30%;
+}
+
+#search-button {
+    font-size: 20px;
+    border: 1px;
+    border-style: solid;
+    background-color: #bbf;
+    border-color: #33a;
+    border-top-right-radius: 32px;
+    border-bottom-right-radius: 32px;
+    padding-top: 1px;
+    padding-right: 8px;
+    padding-bottom: 1px;
+    position: absolute;
+    width: 3%;
+    height: 40px;
+    bottom: 8px;
+    top: 8px;
+    left: 63%;
 }
