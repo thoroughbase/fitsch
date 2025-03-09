@@ -7,8 +7,6 @@
 #include "common/product.hpp"
 #include "webscraper/html.hpp"
 
-using std::string;
-
 struct Store
 {
     StoreID id;
@@ -16,24 +14,24 @@ struct Store
     Region region;
 
     ProductList (*ParseProductSearch)(std::string_view, int);
-    string (*GetProductSearchURL)(std::string_view);
+    std::string (*GetProductSearchURL)(std::string_view);
     std::optional<Product> (*GetProductAtURL)(const HTML&);
 };
 
 // See stores.md
 // SuperValu
 ProductList SV_ParseProductSearch(std::string_view data, int depth=0);
-string SV_GetProductSearchURL(std::string_view query);
+std::string SV_GetProductSearchURL(std::string_view query);
 std::optional<Product> SV_GetProductAtURL(const HTML& html);
 
 // Tesco
 ProductList TE_ParseProductSearch(std::string_view data, int depth=0);
-string TE_GetProductSearchURL(std::string_view query);
+std::string TE_GetProductSearchURL(std::string_view query);
 std::optional<Product> TE_GetProductAtURL(const HTML& html);
 
 // Dunnes Stores
 ProductList DS_ParseProductSearch(std::string_view data, int depth=0);
-string DS_GetProductSearchURL(std::string_view query);
+std::string DS_GetProductSearchURL(std::string_view query);
 std::optional<Product> DS_GetProductAtURL(const HTML& html);
 
 namespace stores

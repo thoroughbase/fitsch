@@ -32,7 +32,7 @@ std::optional<Product> SVLike_GetProductAtURL(const Store& store, const HTML& ht
             result.url = fmt::format("{}/product/{}", store.homepage,
                                      content);
         } else if (property == "price") {
-            result.item_price = Price::FromString(string(content));
+            result.item_price = Price::FromString(std::string { content });
         }
     }
 
@@ -49,7 +49,7 @@ std::optional<Product> SVLike_GetProductAtURL(const Store& store, const HTML& ht
     return result;
 }
 
-string SVLike_GetProductSearchURL(const Store& store, std::string_view query_string)
+std::string SVLike_GetProductSearchURL(const Store& store, std::string_view query_string)
 {
     char* buffer = curl_easy_escape(nullptr, query_string.data(), query_string.size());
     if (!buffer) {
@@ -107,7 +107,8 @@ ProductList SVLike_ParseProductSearch(const Store& store, std::string_view data,
         Product product {
             .store = store.id,
             .name { name_text_node.Text() },
-            .item_price = Price::FromString(string(price_c[0].FirstChild().Text())),
+            .item_price =
+                Price::FromString(std::string { price_c[0].FirstChild().Text() }),
             .price_per_unit = PricePU::FromString(price_per_c[0].FirstChild().Text()),
             .id = fmt::format("{}{}", store.prefix, str_id),
             .url { url_c[0].GetAttrValue("href") },
@@ -136,7 +137,7 @@ std::optional<Product> SV_GetProductAtURL(const HTML& html)
     return SVLike_GetProductAtURL(stores::SuperValu, html);
 }
 
-string SV_GetProductSearchURL(std::string_view query_string)
+std::string SV_GetProductSearchURL(std::string_view query_string)
 {
     return SVLike_GetProductSearchURL(stores::SuperValu, query_string);
 }
@@ -153,7 +154,7 @@ ProductList DS_ParseProductSearch(std::string_view data, int depth)
     return SVLike_ParseProductSearch(stores::DunnesStores, data, depth);
 }
 
-string DS_GetProductSearchURL(std::string_view query)
+std::string DS_GetProductSearchURL(std::string_view query)
 {
     return SVLike_GetProductSearchURL(stores::DunnesStores, query);
 }
@@ -197,7 +198,7 @@ ProductList TE_ParseProductSearch(std::string_view data, int depth)
 
         std::string_view ppu_view = price_per_c[0].FirstChild().Text();
         auto end_substr = ppu_view.find(' ');
-        if (end_substr != string::npos)
+        if (end_substr != std::string::npos)
             ppu_view.remove_suffix(ppu_view.size() - end_substr);
 
         Product product = {
@@ -207,7 +208,8 @@ ProductList TE_ParseProductSearch(std::string_view data, int depth)
             .id = fmt::format("{}{}", stores::Tesco.prefix, id),
             .url = fmt::format("{}{}", stores::Tesco.root_url, relative_url),
             .image_url { srcset },
-            .item_price = Price::FromString(string(price_c[0].FirstChild().Text())),
+            .item_price =
+                Price::FromString(std::string { price_c[0].FirstChild().Text() }),
             .price_per_unit = PricePU::FromString(ppu_view)
         };
 
@@ -220,7 +222,7 @@ ProductList TE_ParseProductSearch(std::string_view data, int depth)
     return results;
 }
 
-string TE_GetProductSearchURL(std::string_view query)
+std::string TE_GetProductSearchURL(std::string_view query)
 {
     char* buffer = curl_easy_escape(nullptr, query.data(), query.size());
     if (!buffer) {
@@ -228,7 +230,7 @@ string TE_GetProductSearchURL(std::string_view query)
         return {};
     }
 
-    string url = fmt::format("{}/search?query={}", stores::Tesco.homepage, buffer);
+    std::string url = fmt::format("{}/search?query={}", stores::Tesco.homepage, buffer);
     free(buffer);
 
     return url;
@@ -248,7 +250,7 @@ std::optional<Product> TE_GetProductAtURL(const HTML& html)
     json root_json_obj = json::parse(product_json[0].FirstChild().Text());
     json& graph = root_json_obj["@graph"];
     auto iterator = std::find_if(graph.begin(), graph.end(), [] (const json& j) {
-        return j["@type"].get<string>() == "Product";
+        return j["@type"].get<std::string>() == "Product";
     });
 
     if (iterator == graph.end()) {
@@ -261,7 +263,7 @@ std::optional<Product> TE_GetProductAtURL(const HTML& html)
 
     unsigned int price = product_info["offers"]["price"].get<float>() * 100;
 
-    const std::string sku = product_info["sku"].get<string>();
+    const std::string sku = product_info["sku"].get<std::string>();
 
     Product result = {
         .store = stores::Tesco.id, .name = product_info["name"],
@@ -281,7 +283,7 @@ std::optional<Product> TE_GetProductAtURL(const HTML& html)
     } else {
         std::string_view ppu_view = priceper[0].FirstChild().Text();
         auto end_substr = ppu_view.find(' ');
-        if (end_substr != string::npos)
+        if (end_substr != std::string::npos)
             ppu_view.remove_suffix(ppu_view.size() - end_substr);
 
         result.price_per_unit = PricePU::FromString(ppu_view);

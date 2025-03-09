@@ -12,7 +12,6 @@
 #include "common/util.hpp"
 
 using nlohmann::json;
-using std::string;
 
 enum class StoreID { SUPERVALU, LIDL, TESCO, ALDI, DUNNES_STORES };
 enum class Region { IE };
@@ -27,8 +26,8 @@ enum class Currency { EUR };
 
 struct Price
 {
-    string ToString() const;
-    static Price FromString(string str);
+    std::string ToString() const;
+    static Price FromString(std::string str);
 
     std::partial_ordering operator<=>(const Price& other) const;
     Price operator*(float b) const;
@@ -43,7 +42,7 @@ void from_json(const json& j, Price& p);
 
 struct PricePU
 {
-    string ToString() const;
+    std::string ToString() const;
     static PricePU FromString(std::string_view str);
 
     std::partial_ordering operator<=>(const PricePU& other) const;
@@ -60,7 +59,7 @@ using StoreSelection = std::vector<StoreID>;
 
 struct Product
 {
-    string name, description, image_url, url, id;
+    std::string name, description, image_url, url, id;
     Price item_price;
     PricePU price_per_unit; // Price per KG, L, etc.
     StoreID store;
@@ -80,9 +79,9 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(QueryResultInfo, relevance);
 // Database representation of queries - Product IDs + extra query info
 struct QueryTemplate
 {
-    string query_string;
+    std::string query_string;
     StoreSelection stores;
-    std::unordered_map<string, QueryResultInfo> results;
+    std::unordered_map<std::string, QueryResultInfo> results;
     std::time_t timestamp;
     int depth;
 };

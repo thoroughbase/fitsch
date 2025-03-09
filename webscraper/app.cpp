@@ -17,7 +17,8 @@
 
 // ResultCallbacks
 
-static void PrintProduct(const std::vector<Result>& results, App* app, const string& url)
+static void PrintProduct(const std::vector<Result>& results, App* app,
+    const std::string& url)
 {
     if (results.empty()) {
         Log(LogLevel::WARNING, "No product found at URL {}", url);
@@ -37,8 +38,9 @@ static void PrintProduct(const std::vector<Result>& results, App* app, const str
     app->database.PutProducts(tb::make_span({ product }));
 }
 
-static void SendQuery(const std::vector<Result>& results, App* app, const string& dest,
-    const string& query_string, const StoreSelection& stores, int request_id)
+static void SendQuery(const std::vector<Result>& results, App* app,
+    const std::string& dest, const std::string& query_string,
+    const StoreSelection& stores, int request_id)
 {
     ProductList list;
     bool upload = false;
@@ -72,7 +74,8 @@ static void SendQuery(const std::vector<Result>& results, App* app, const string
 
 // TaskCallbacks
 // Single product
-static Result TC_GetProduct_Parse(TaskContext ctx, const Store* store, const string& data)
+static Result TC_GetProduct_Parse(TaskContext ctx, const Store* store,
+    const std::string& data)
 {
     HTML html(data);
 
@@ -82,14 +85,14 @@ static Result TC_GetProduct_Parse(TaskContext ctx, const Store* store, const str
     return { ResultType::GENERIC_VALID, new Product(std::move(*product)) };
 }
 
-static Result TC_GetProduct_Fetch(TaskContext ctx, App* app, const string& url,
+static Result TC_GetProduct_Fetch(TaskContext ctx, App* app, const std::string& url,
     const Store* store)
 {
     auto handle = ctx.delegator.QueueExtraExternalTask(ctx.group_id);
     app->curl_driver->PerformTransfer(url, [handle, ctx, store] (auto data, auto url,
         CURLcode code) {
         ctx.delegator.QueueExtraTasks(ctx.group_id,
-            Task { TC_GetProduct_Parse, store, string(data) }
+            Task { TC_GetProduct_Parse, store, std::string { data } }
         );
         handle.Finish({});
     });
@@ -98,8 +101,8 @@ static Result TC_GetProduct_Fetch(TaskContext ctx, App* app, const string& url,
 }
 
 // Product list
-static Result TC_DoQuery_Parse(TaskContext ctx, const Store* store, const string& data,
-    int depth)
+static Result TC_DoQuery_Parse(TaskContext ctx, const Store* store,
+    const std::string& data, int depth)
 {
     ProductList list = store->ParseProductSearch(data, depth);
 
@@ -109,20 +112,20 @@ static Result TC_DoQuery_Parse(TaskContext ctx, const Store* store, const string
     };
 }
 
-static Result TC_DoQuery(TaskContext ctx, App* app, const string& query_string,
+static Result TC_DoQuery(TaskContext ctx, App* app, const std::string& query_string,
     const StoreSelection& stores, int depth)
 {
     // Figure out what pages need to be fetched first
     for (StoreID id : stores) {
         const Store* store = app->GetStore(id);
-        string url = store->GetProductSearchURL(query_string);
+        std::string url = store->GetProductSearchURL(query_string);
 
         auto handle = ctx.delegator.QueueExtraExternalTask(ctx.group_id);
 
         app->curl_driver->PerformTransfer(url,
         [handle, ctx, store, depth] (auto data, auto url, CURLcode code) {
             ctx.delegator.QueueExtraTasks(ctx.group_id,
-                Task { TC_DoQuery_Parse, store, string(data), depth }
+                Task { TC_DoQuery_Parse, store, std::string { data }, depth }
             );
             handle.Finish({});
         });
@@ -131,8 +134,8 @@ static Result TC_DoQuery(TaskContext ctx, App* app, const string& query_string,
     return {};
 }
 
-static Result TC_GetQueriesDB(TaskContext ctx, App* app, const string& query_string,
-    const StoreSelection& stores, int depth)
+static Result TC_GetQueriesDB(TaskContext ctx, App* app,
+    const std::string& query_string, const StoreSelection& stores, int depth)
 {
     // Get query template stored in database
     ProductList list(depth);
@@ -165,7 +168,7 @@ static Result TC_GetQueriesDB(TaskContext ctx, App* app, const string& query_str
                     auto& [id, info] = pair;
                     return !(depth > 0 && info.relevance >= depth);
                 })
-            ) | tb::range_to<std::vector<string>>();
+            ) | tb::range_to<std::vector<std::string>>();
             auto products = app->database.GetProducts(relevant_ids);
 
             for (auto& p : products)
@@ -207,8 +210,8 @@ App::App(std::string_view cfg_path)
     json config = json::parse(cfg_file);
     cfg_file.close();
 
-    string mongouri = config["mongodb_uri"];
-    string user_agent = config["curl"]["user_agent"];
+    std::string mongouri = config["mongodb_uri"];
+    std::string user_agent = config["curl"]["user_agent"];
 
     curl_driver = std::make_unique<CURLDriver>(128, user_agent);
     curl_driver->Run();
@@ -236,7 +239,7 @@ App::App(std::string_view cfg_path)
             stores::DunnesStores.id
         };
         for (const json& j : msg.content["terms"]) {
-            std::string term = j.get<string>();
+            auto term = j.get<std::string>();
             delegator.QueueTasks(
                 { SendQuery, this, msg.src, term, stores, request_id },
                 Task { TC_GetQueriesDB, this, term, stores, 10 }
@@ -256,14 +259,14 @@ void App::AddStore(const Store* store) { stores.emplace(store->id, store); }
 
 const Store* App::GetStore(StoreID id) { return stores[id]; }
 
-void App::GetProductAtURL(StoreID store, const string& item_url)
+void App::GetProductAtURL(StoreID store, std::string_view item_url)
 {
     if (!stores.contains(store)) {
         Log(LogLevel::WARNING, "Invalid store!");
         return;
     }
 
-    delegator.QueueTasks({ PrintProduct, this, item_url },
-        Task { TC_GetProduct_Fetch, this, item_url, stores[store] }
+    delegator.QueueTasks({ PrintProduct, this, std::string { item_url } },
+        Task { TC_GetProduct_Fetch, this, std::string { item_url }, stores[store] }
     );
 }

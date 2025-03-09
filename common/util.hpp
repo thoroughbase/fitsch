@@ -13,8 +13,6 @@
 
 enum class LogLevel { DEBUG = 0, INFO = 1, WARNING = 2, SEVERE = 3 };
 
-using std::string;
-
 template <typename... T>
 void Log(LogLevel l, fmt::format_string<T...> format, T&&... args)
 {

@@ -8,8 +8,6 @@
 
 #include "common/util.hpp"
 
-using std::string;
-
 template<typename T>
 concept CollectionCompatible = requires(T t, lxb_dom_collection_t* col, size_t index) {
     requires std::is_constructible_v<T, decltype(t.Data())>;

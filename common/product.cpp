@@ -32,7 +32,7 @@ const std::unordered_map<std::string_view, std::pair<Unit, float>>
 
 // Price
 
-string Price::ToString() const
+std::string Price::ToString() const
 {
     std::string result = std::to_string(value);
 
@@ -47,11 +47,11 @@ string Price::ToString() const
     return result;
 }
 
-Price Price::FromString(string str)
+Price Price::FromString(std::string str)
 {
     Price price;
     size_t comma;
-    if ((comma = str.find(',')) != string::npos)
+    if ((comma = str.find(',')) != std::string::npos)
         str.erase(comma, 1);
 
     std::string_view view(str);
@@ -69,7 +69,7 @@ Price Price::FromString(string str)
 
     try {
         price.value = std::stoi(view.substr(0, ss_point).data()) * 100;
-        if (ss_point != string::npos)
+        if (ss_point != std::string::npos)
             price.value += std::stoi(view.substr(ss_point + 1).data());
     } catch (const std::exception& e) {
         Log(LogLevel::WARNING, "Error converting string {} to Price: {}", str, e.what());
@@ -103,7 +103,7 @@ void from_json(const json& j, Price& p)
 
 // Price per unit
 
-string PricePU::ToString() const
+std::string PricePU::ToString() const
 {
 	const std::string_view& suffix = UNIT_SUFFIXES[static_cast<size_t>(unit)];
     return price.ToString().append(suffix.begin(), suffix.end());
@@ -114,8 +114,8 @@ PricePU PricePU::FromString(std::string_view str)
     if (str.empty()) return {};
 
     size_t delimiter;
-    if ((delimiter = str.find('/')) == string::npos) {
-        if ((delimiter = str.find(' ')) == string::npos) {
+    if ((delimiter = str.find('/')) == std::string::npos) {
+        if ((delimiter = str.find(' ')) == std::string::npos) {
             Log(LogLevel::WARNING, "Unrecognised delimiter/unit for '{}'!", str);
             return {};
         }
@@ -131,7 +131,7 @@ PricePU PricePU::FromString(std::string_view str)
     }
 
     auto [unit_type, factor] = UNIT_CONVERSIONS.at(unit_view);
-    return { Price::FromString(std::string(price_view)) * factor, unit_type };
+    return { Price::FromString(std::string { price_view }) * factor, unit_type };
 }
 
 std::partial_ordering PricePU::operator<=>(const PricePU& other) const

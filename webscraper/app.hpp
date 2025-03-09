@@ -17,8 +17,6 @@
 #define VERSION "0.0.1"
 #define ENTRY_EXPIRY_TIME 86400 * 2
 
-using std::string;
-
 class App
 {
 public:
@@ -28,7 +26,7 @@ public:
     void AddStore(const Store* store);
     const Store* GetStore(StoreID id);
 
-    void GetProductAtURL(StoreID store, const string& item_url);
+    void GetProductAtURL(StoreID store, std::string_view item_url);
 
     Delegator delegator{16};
     std::unique_ptr<CURLDriver> curl_driver;

@@ -25,13 +25,13 @@ bool Database::Connect(const mongocxx::uri& uri)
     return valid;
 }
 
-std::vector<Product> Database::GetProducts(std::span<const string> ids)
+std::vector<Product> Database::GetProducts(std::span<const std::string> ids)
 {
     return Get<Product>("products", "id", ids);
 }
 
 std::vector<QueryTemplate> Database::GetQueryTemplates(
-    std::span<const string> search_terms)
+    std::span<const std::string> search_terms)
 {
     return Get<QueryTemplate>("queries", "query_string", search_terms);
 }

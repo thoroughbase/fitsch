@@ -15,8 +15,6 @@
 
 #include "common/product.hpp"
 
-using std::string;
-
 // TODO: Consider other database architectures
 class Database
 {
@@ -26,8 +24,8 @@ public:
     bool Connect(const mongocxx::uri& uri);
 
     template<typename T>
-    std::vector<T> Get(const string& collection_name, std::string_view field,
-                       std::span<const string> terms)
+    std::vector<T> Get(const std::string& collection_name, std::string_view field,
+                       std::span<const std::string> terms)
     {
         if (!valid) {
             Log(LogLevel::WARNING,
@@ -60,7 +58,7 @@ public:
     }
 
     template<typename T>
-    void Put(const string& collection_name, std::string_view field,
+    void Put(const std::string& collection_name, std::string_view field,
              std::span<const T> items)
     {
         if (!valid) {
@@ -77,8 +75,8 @@ public:
 
         auto removals =
             items | std::views::transform([field] (const json& item) {
-                return item[field].get<string>();
-            }) | tb::range_to<std::vector<string>>();
+                return item[field].get<std::string>();
+            }) | tb::range_to<std::vector<std::string>>();
 
         auto docs =
             items | std::views::transform([] (const json& item) {
@@ -97,8 +95,9 @@ public:
         }
     }
 
-    std::vector<Product> GetProducts(std::span<const string> id);
-    std::vector<QueryTemplate> GetQueryTemplates(std::span<const string> search_terms);
+    std::vector<Product> GetProducts(std::span<const std::string> id);
+    std::vector<QueryTemplate> GetQueryTemplates(
+        std::span<const std::string> search_terms);
 
     void PutProducts(std::span<const Product> products);
     void PutQueryTemplates(std::span<const QueryTemplate> query_templates);
