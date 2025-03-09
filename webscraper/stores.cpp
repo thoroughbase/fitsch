@@ -53,7 +53,7 @@ string SVLike_GetProductSearchURL(const Store& store, std::string_view query_str
 {
     char* buffer = curl_easy_escape(nullptr, query_string.data(), query_string.size());
     if (!buffer) {
-        Log(WARNING, "Failed to escape query string {}", query_string);
+        Log(LogLevel::WARNING, "Failed to escape query string {}", query_string);
         return {};
     }
 
@@ -86,7 +86,7 @@ ProductList SVLike_ParseProductSearch(const Store& store, std::string_view data,
 
         if (!name_c.size() || !price_c.size() || !price_per_c.size()
          || !image_c.size() || !url_c.size()) {
-            Log(WARNING, "One or more details missing for product {} on page",
+            Log(LogLevel::WARNING, "One or more details missing for product {} on page",
                 results.products.size());
             continue;
         }
@@ -96,7 +96,8 @@ ProductList SVLike_ParseProductSearch(const Store& store, std::string_view data,
         });
 
         if (!name_text_node) {
-            Log(WARNING, "Name not found for product {}", results.products.size());
+            Log(LogLevel::WARNING,
+                "Name not found for product {}", results.products.size());
             continue;
         }
 
@@ -223,7 +224,7 @@ string TE_GetProductSearchURL(std::string_view query)
 {
     char* buffer = curl_easy_escape(nullptr, query.data(), query.size());
     if (!buffer) {
-        Log(WARNING, "Failed to escape query string {}", query);
+        Log(LogLevel::WARNING, "Failed to escape query string {}", query);
         return {};
     }
 
@@ -239,7 +240,7 @@ std::optional<Product> TE_GetProductAtURL(const HTML& html)
         ELEMENT_HEAD, false);
 
     if (!product_json.size()) {
-        Log(WARNING, "Product information not found for Tesco product page - "
+        Log(LogLevel::WARNING, "Product information not found for Tesco product page - "
                      "element not found");
         return {};
     }
@@ -251,8 +252,8 @@ std::optional<Product> TE_GetProductAtURL(const HTML& html)
     });
 
     if (iterator == graph.end()) {
-        Log(WARNING, "Product information not found for Tesco product page - "
-                     "JSON obj not found");
+        Log(LogLevel::WARNING,
+            "Product information not found for Tesco product page - JSON obj not found");
         return {};
     }
 
@@ -267,7 +268,7 @@ std::optional<Product> TE_GetProductAtURL(const HTML& html)
         .description = product_info["description"],
         .id = fmt::format("{}{}", stores::Tesco.prefix, sku),
         .image_url = product_info["image"][0],
-        .item_price = Price { EUR, price },
+        .item_price = Price { Currency::EUR, price },
         .timestamp = std::time(nullptr),
         .url = fmt::format("{}/products/{}", stores::Tesco.homepage, sku)
     };

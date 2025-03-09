@@ -251,9 +251,10 @@ void CURLDriver::Drive()
         if (CURLMcode error_code = general_context.return_code;
             error_code != CURLM_OK) {
 
-            Log(WARNING, "Error occurred during curl transfer: {} (CURLMcode = {})",
+            Log(LogLevel::WARNING,
+                "Error occurred during curl transfer: {} (CURLMcode = {})",
                 curl_multi_strerror(error_code), (int)error_code);
-            Log(INFO, "Re-registering handles & events...");
+            Log(LogLevel::INFO, "Re-registering handles & events...");
 
             event_free(general_context.timer_event);
             general_context.timer_event = nullptr;
@@ -284,7 +285,8 @@ void CURLDriver::Drive()
 
             CURLcode error_code = message->data.result;
             if (error_code != CURLE_OK) {
-                Log(WARNING, "Error occurred during curl transfer: {} (CURLcode = {})",
+                Log(LogLevel::WARNING,
+                    "Error occurred during curl transfer: {} (CURLcode = {})",
                     curl_easy_strerror(error_code), (int)error_code);
             }
 

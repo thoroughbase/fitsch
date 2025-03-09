@@ -107,7 +107,7 @@ void Delegator::ProcessResult(unsigned group_id, Result&& result)
 
     if (result_vec.size() >= container.expecting) {
         std::erase_if(result_vec, [] (Result& result) {
-            return result.Type() == EMPTY;
+            return result.Type() == ResultType::EMPTY;
         });
         container.result_cb(result_vec);
         results.erase(id);

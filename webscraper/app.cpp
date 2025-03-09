@@ -20,12 +20,12 @@
 static void PrintProduct(const std::vector<Result>& results, App* app, const string& url)
 {
     if (results.empty()) {
-        Log(WARNING, "No product found at URL {}", url);
+        Log(LogLevel::WARNING, "No product found at URL {}", url);
         return;
     }
 
-    if (results[0].Type() == GENERIC_ERROR) {
-        Log(WARNING, "Error whilst fetching/parsing product at URL {}", url);
+    if (results[0].Type() == ResultType::GENERIC_ERROR) {
+        Log(LogLevel::WARNING, "Error whilst fetching/parsing product at URL {}", url);
         return;
     }
 
@@ -44,7 +44,7 @@ static void SendQuery(const std::vector<Result>& results, App* app, const string
     bool upload = false;
 
     for (auto& result : results) {
-        if (result.Type() != GENERIC_VALID) continue;
+        if (result.Type() != ResultType::GENERIC_VALID) continue;
         auto& [queried_website, product_list]
             = result.Get<std::pair<bool, ProductList>>();
 
@@ -63,7 +63,7 @@ static void SendQuery(const std::vector<Result>& results, App* app, const string
     });
 
     if (upload) {
-        Log(DEBUG, "Uploading query {}", query_string);
+        Log(LogLevel::DEBUG, "Uploading query {}", query_string);
         auto qt = list.AsQueryTemplate(query_string, stores);
         app->database.PutQueryTemplates(tb::make_span({ qt }));
         if (!list.products.empty()) app->database.PutProducts(products);
@@ -77,9 +77,9 @@ static Result TC_GetProduct_Parse(TaskContext ctx, const Store* store, const str
     HTML html(data);
 
     std::optional<Product> product = store->GetProductAtURL(html);
-    if (!product) return { GENERIC_ERROR, nullptr };
+    if (!product) return { ResultType::GENERIC_ERROR, nullptr };
 
-    return { GENERIC_VALID, new Product(std::move(*product)) };
+    return { ResultType::GENERIC_VALID, new Product(std::move(*product)) };
 }
 
 static Result TC_GetProduct_Fetch(TaskContext ctx, App* app, const string& url,
@@ -103,7 +103,10 @@ static Result TC_DoQuery_Parse(TaskContext ctx, const Store* store, const string
 {
     ProductList list = store->ParseProductSearch(data, depth);
 
-    return { GENERIC_VALID, new std::pair<bool, ProductList>(true, std::move(list)) };
+    return {
+        ResultType::GENERIC_VALID,
+        new std::pair<bool, ProductList>(true, std::move(list))
+    };
 }
 
 static Result TC_DoQuery(TaskContext ctx, App* app, const string& query_string,
@@ -177,7 +180,10 @@ static Result TC_GetQueriesDB(TaskContext ctx, App* app, const string& query_str
         );
     }
 
-    return { GENERIC_VALID, new std::pair<bool, ProductList>(false, std::move(list)) };
+    return {
+        ResultType::GENERIC_VALID,
+        new std::pair<bool, ProductList>(false, std::move(list))
+    };
 }
 
 // App
@@ -186,15 +192,15 @@ App::App(std::string_view cfg_path)
 {
     CURLDriver::GlobalInit();
     buxtehude::Initialise([] (buxtehude::LogLevel l, std::string_view msg) {
-        Log((LogLevel)l, "(buxtehude) {}", msg);
+        Log(static_cast<LogLevel>(l), "(buxtehude) {}", msg);
     });
 
-    Log(INFO, "Starting Fitsch {}", VERSION);
+    Log(LogLevel::INFO, "Starting Fitsch {}", VERSION);
 
     std::ifstream cfg_file(cfg_path);
 
     if (!cfg_file.is_open()) {
-        Log(SEVERE, "Failed to open `config.json`. Shutting down");
+        Log(LogLevel::SEVERE, "Failed to open `config.json`. Shutting down");
         std::exit(1);
     }
 
@@ -212,13 +218,13 @@ App::App(std::string_view cfg_path)
     bclient = std::make_unique<buxtehude::Client>();
     bclient->preferences.format = buxtehude::MSGPACK;
     if (!bclient->IPConnect("localhost", 1637, "webscraper")) {
-        Log(WARNING, "Failed to connect to buxtehude server");
+        Log(LogLevel::WARNING, "Failed to connect to buxtehude server");
         bclient->Close();
         bclient.reset();
         return;
     }
 
-    Log(INFO, "Established connection to buxtehude server");
+    Log(LogLevel::INFO, "Established connection to buxtehude server");
 
     bclient->AddHandler("query", [this] (buxtehude::Client& client,
                         const buxtehude::Message& msg) {
@@ -253,7 +259,7 @@ const Store* App::GetStore(StoreID id) { return stores[id]; }
 void App::GetProductAtURL(StoreID store, const string& item_url)
 {
     if (!stores.contains(store)) {
-        Log(WARNING, "Invalid store!");
+        Log(LogLevel::WARNING, "Invalid store!");
         return;
     }
 

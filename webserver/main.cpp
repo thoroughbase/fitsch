@@ -25,7 +25,7 @@ int main()
     bclient->preferences.format = buxtehude::MSGPACK;
 
     if (!bclient->IPConnect("localhost", 1637, "webserver")) {
-        Log(SEVERE, "Failed to connect to buxtehude server");
+        Log(LogLevel::SEVERE, "Failed to connect to buxtehude server");
         return 1;
     }
 

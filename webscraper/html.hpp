@@ -105,7 +105,7 @@ public:
     Collection(lxb_dom_document_t* dom, size_t capacity)
     {
         ptr = lxb_dom_collection_make(dom, capacity);
-        if (!ptr && dom) Log(WARNING, "Failed to create collection!");
+        if (!ptr && dom) Log(LogLevel::WARNING, "Failed to create collection!");
     }
 
     // Move constructors

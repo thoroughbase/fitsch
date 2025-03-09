@@ -9,20 +9,20 @@
 #include <fmt/format.h>
 #include <fmt/chrono.h>
 
-#define MIN_LOG_LEVEL DEBUG
+#define MIN_LOG_LEVEL LogLevel::DEBUG
 
-enum LogLevel { DEBUG = 0, INFO = 1, WARNING = 2, SEVERE = 3 };
+enum class LogLevel { DEBUG = 0, INFO = 1, WARNING = 2, SEVERE = 3 };
 
 using std::string;
 
 template <typename... T>
 void Log(LogLevel l, fmt::format_string<T...> format, T&&... args)
 {
-    const static char* LEVEL_NAMES[] = { "DEBUG", "INFO", "WARNING", "SEVERE" };
+    constexpr std::string_view LEVEL_NAMES[] = { "DEBUG", "INFO", "WARNING", "SEVERE" };
 
     if (l < MIN_LOG_LEVEL) return;
 
-    fmt::print("[{} {:%H:%M:%S}] {}\n", LEVEL_NAMES[l],
+    fmt::print("[{} {:%H:%M:%S}] {}\n", LEVEL_NAMES[static_cast<size_t>(l)],
                fmt::localtime(std::time(nullptr)),
                fmt::vformat(format, fmt::make_format_args(args...)));
 }

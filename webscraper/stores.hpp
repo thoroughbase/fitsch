@@ -41,30 +41,30 @@ namespace stores
 
 constexpr Store SuperValu =
 {
-    .id = SUPERVALU, .name = "SuperValu", .prefix = "SV",
+    .id = StoreID::SUPERVALU, .name = "SuperValu", .prefix = "SV",
     .homepage = "https://shop.supervalu.ie/sm/delivery/rsid/5550",
     .root_url = "https://shop.supervalu.ie",
-    .region = IE,
+    .region = Region::IE,
     .GetProductSearchURL = SV_GetProductSearchURL,
     .GetProductAtURL = SV_GetProductAtURL,
     .ParseProductSearch = SV_ParseProductSearch
 };
 
 constexpr Store Tesco = {
-    .id = TESCO, .name = "Tesco", .prefix = "TE",
+    .id = StoreID::TESCO, .name = "Tesco", .prefix = "TE",
     .homepage = "https://www.tesco.ie/groceries/en-IE",
     .root_url = "https://www.tesco.ie",
-    .region = IE,
+    .region = Region::IE,
     .GetProductSearchURL = TE_GetProductSearchURL,
     .GetProductAtURL = TE_GetProductAtURL,
     .ParseProductSearch = TE_ParseProductSearch
 };
 
 constexpr Store DunnesStores = {
-    .id = DUNNES_STORES, .name = "Dunnes Stores", .prefix = "DS",
+    .id = StoreID::DUNNES_STORES, .name = "Dunnes Stores", .prefix = "DS",
     .homepage = "https://www.dunnesstoresgrocery.com",
     .root_url = "https://www.dunnesstoresgrocery.com",
-    .region = IE,
+    .region = Region::IE,
     .GetProductSearchURL = DS_GetProductSearchURL,
     .GetProductAtURL = DS_GetProductAtURL,
     .ParseProductSearch = DS_ParseProductSearch

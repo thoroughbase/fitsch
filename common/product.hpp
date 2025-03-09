@@ -14,13 +14,16 @@
 using nlohmann::json;
 using std::string;
 
-enum StoreID { SUPERVALU, LIDL, TESCO, ALDI, DUNNES_STORES };
-enum Region { IE };
+enum class StoreID { SUPERVALU, LIDL, TESCO, ALDI, DUNNES_STORES };
+enum class Region { IE };
 
-enum Unit { None = 0, Piece = 1, Kilogrammes = 2, Litres = 3, SqMetres = 4, Metres = 5 };
-constexpr const char* UNIT_SUFFIXES[] = { "", " each", "/kg", "/l", "/m²", "m" };
+enum class Unit
+{
+	None = 0, Piece = 1, Kilogrammes = 2, Litres = 3,
+	SqMetres = 4, Metres = 5
+};
 
-enum Currency { EUR };
+enum class Currency { EUR };
 
 struct Price
 {
@@ -30,7 +33,7 @@ struct Price
     std::partial_ordering operator<=>(const Price& other) const;
     Price operator*(float b) const;
 
-    Currency currency = EUR;
+    Currency currency = Currency::EUR;
     unsigned value = 0;
 };
 
@@ -45,8 +48,8 @@ struct PricePU
 
     std::partial_ordering operator<=>(const PricePU& other) const;
 
-    Price price { EUR, 0 };
-    Unit unit = None;
+    Price price { Currency::EUR, 0 };
+    Unit unit = Unit::None;
 };
 
 // Price per unit struct is serialised as a tuple of unit & price tuple

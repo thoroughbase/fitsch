@@ -33,7 +33,7 @@ std::string_view Element::GetAttrValue(std::string_view attrname) const
     lxb_dom_attr_t* attr;
     if (!(attr = lxb_dom_element_attr_by_name(ptr, (lxb_char_t*)attrname.data(),
         attrname.size()))) {
-        Log(WARNING, "Attribute {} not found!", attrname);
+        Log(LogLevel::WARNING, "Attribute {} not found!", attrname);
         return {};
     }
 
@@ -52,7 +52,7 @@ lxb_dom_element_t* Element::Data() const { return ptr; }
 HTML::HTML()
 {
     dom = lxb_html_document_create();
-    if (!dom) Log(WARNING, "Error creating DOM");
+    if (!dom) Log(LogLevel::WARNING, "Error creating DOM");
 }
 
 HTML::HTML(std::string_view data) : HTML() { Parse(data); }
@@ -65,7 +65,7 @@ void HTML::Parse(std::string_view data)
         lxb_html_document_parse(dom, (lxb_char_t*)data.data(), data.size());
 
     if (status != LXB_STATUS_OK) {
-        Log(WARNING, "Reading page failed with status: {}", status);
+        Log(LogLevel::WARNING, "Reading page failed with status: {}", status);
     }
 }
 
@@ -99,7 +99,7 @@ void HTML::_SearchTag(lxb_dom_collection_t* c, std::string_view tag,
         = lxb_dom_elements_by_tag_name(rootptr, c, (lxb_char_t*)tag.data(), tag.size());
 
     if (status != LXB_STATUS_OK)
-        Log(WARNING, "SearchTag failed with code {}", status);
+        Log(LogLevel::WARNING, "SearchTag failed with code {}", status);
 }
 
 Collection<Element> HTML::SearchAttr(std::string_view attr, std::string_view val,
@@ -157,5 +157,5 @@ void HTML::_SearchAttr(lxb_dom_collection_t* c, std::string_view attr,
                                (lxb_char_t*)val.data(), val.size(), broad);
 
     if (status != LXB_STATUS_OK)
-        Log(WARNING, "SearchAttr failed with code {}", status);
+        Log(LogLevel::WARNING, "SearchAttr failed with code {}", status);
 }

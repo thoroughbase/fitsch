@@ -5,10 +5,14 @@
 #include <ctime>
 #include <ranges>
 
-// Constant hash-maps
+// Constants
+
+constexpr std::string_view UNIT_SUFFIXES[] = {
+	"", " each", "/kg", "/l", "/m²", "m"
+};
 
 const std::unordered_map<Currency, std::string_view> CURRENCY_SYMBOLS = {
-    { EUR, "€" }
+    { Currency::EUR, "€" }
 };
 
 const std::unordered_map<std::string_view, std::pair<Unit, float>>
@@ -68,7 +72,7 @@ Price Price::FromString(string str)
         if (ss_point != string::npos)
             price.value += std::stoi(view.substr(ss_point + 1).data());
     } catch (const std::exception& e) {
-        Log(WARNING, "Error converting string {} to Price: {}", str, e.what());
+        Log(LogLevel::WARNING, "Error converting string {} to Price: {}", str, e.what());
         return {};
     }
 
@@ -101,7 +105,8 @@ void from_json(const json& j, Price& p)
 
 string PricePU::ToString() const
 {
-    return price.ToString() + UNIT_SUFFIXES[unit];
+	const std::string_view& suffix = UNIT_SUFFIXES[static_cast<size_t>(unit)];
+    return price.ToString().append(suffix.begin(), suffix.end());
 }
 
 PricePU PricePU::FromString(std::string_view str)
@@ -111,7 +116,7 @@ PricePU PricePU::FromString(std::string_view str)
     size_t delimiter;
     if ((delimiter = str.find('/')) == string::npos) {
         if ((delimiter = str.find(' ')) == string::npos) {
-            Log(WARNING, "Unrecognised delimiter/unit for '{}'!", str);
+            Log(LogLevel::WARNING, "Unrecognised delimiter/unit for '{}'!", str);
             return {};
         }
     }
@@ -121,7 +126,7 @@ PricePU PricePU::FromString(std::string_view str)
     std::string_view price_view(str.data(), delimiter);
 
     if (!UNIT_CONVERSIONS.contains(unit_view)) {
-        Log(WARNING, "Unrecognised unit for '{}'!", str);
+        Log(LogLevel::WARNING, "Unrecognised unit for '{}'!", str);
         return {};
     }
 

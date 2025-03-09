@@ -19,7 +19,7 @@ using ResultCallback = std::function<void(const std::vector<Result>&)>;
 
 using BoundDeleter = std::function<void()>;
 
-enum ResultType
+enum class ResultType
 {
     EMPTY, GENERIC_ERROR, GENERIC_VALID, GENERIC_SINGLE, GENERIC_VECTOR
 };
@@ -59,7 +59,7 @@ public:
     ~Result();
 
 private:
-    ResultType type = EMPTY;
+    ResultType type = ResultType::EMPTY;
     void* data = nullptr;
     BoundDeleter deleter = nullptr;
 };

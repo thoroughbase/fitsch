@@ -14,7 +14,7 @@ QueryHandler::QueryHandler(buxtehude::Client& bclient, std::string_view webscrap
     bclient.AddHandler("query-result", [this] (buxtehude::Client& cl,
         const buxtehude::Message& msg) {
         if (!buxtehude::ValidateJSON(msg.content, validate::QUERY_RESULT)) {
-            Log(WARNING, "Invalid query-result message received!");
+            Log(LogLevel::WARNING, "Invalid query-result message received!");
             return;
         }
         int id = msg.content["request-id"];

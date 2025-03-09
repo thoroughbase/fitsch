@@ -30,7 +30,8 @@ public:
                        std::span<const string> terms)
     {
         if (!valid) {
-            Log(WARNING, "Not connected to database, could not get documents");
+            Log(LogLevel::WARNING,
+                "Not connected to database, could not get documents");
             return {};
         }
 
@@ -52,8 +53,8 @@ public:
                 matches.emplace_back(j.get<T>());
             }
         } catch (const std::exception& e) {
-            Log(WARNING, "Error searching with term `{}`: {}", search_term.dump(),
-                e.what());
+            Log(LogLevel::WARNING, "Error searching with term `{}`: {}",
+                search_term.dump(), e.what());
         }
         return matches;
     }
@@ -63,7 +64,8 @@ public:
              std::span<const T> items)
     {
         if (!valid) {
-            Log(WARNING, "Not connected to database, could not put documents");
+            Log(LogLevel::WARNING,
+                "Not connected to database, could not put documents");
             return;
         }
 
@@ -91,7 +93,7 @@ public:
             collection.delete_many(bsoncxx::from_json(remove_command.dump()));
             collection.insert_many(docs);
         } catch (const std::exception& e) {
-            Log(WARNING, "Error putting documents: {}", e.what());
+            Log(LogLevel::WARNING, "Error putting documents: {}", e.what());
         }
     }
 

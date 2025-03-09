@@ -13,11 +13,12 @@ bool Database::Connect(const mongocxx::uri& uri)
     try {
         pool = std::make_unique<mongocxx::pool>(uri);
         if (Ping()) {
-            Log(INFO, "Connected to database.");
+            Log(LogLevel::INFO, "Connected to database.");
             valid = true;
         }
     } catch (const std::exception& e) {
-        Log(SEVERE, "Failed to establish connection to database: {}", e.what());
+        Log(LogLevel::SEVERE,
+            "Failed to establish connection to database: {}", e.what());
         valid = false;
     }
 
@@ -53,7 +54,7 @@ bool Database::Ping()
         auto admindb = (*client)["admin"];
         admindb.run_command(bsoncxx::from_json(ping.dump()));
     } catch (const std::exception& e) {
-        Log(SEVERE, "Failed to ping database: {}", e.what());
+        Log(LogLevel::SEVERE, "Failed to ping database: {}", e.what());
         return false;
     }
 
