@@ -22,6 +22,8 @@ lxb_dom_node_t* Node::Data() const { return ptr; }
 
 Element::Element(lxb_dom_element_t* element) : ptr(element) {}
 
+Element::Element(DOMTag dom_tag) : dom_tag(dom_tag) {}
+
 bool Element::HasAttr(std::string_view attrname) const
 {
     return lxb_dom_element_attr_is_exist(ptr, (lxb_char_t*)attrname.data(),
@@ -137,10 +139,10 @@ void HTML::SearchClass(Collection<Element>& col, std::string_view name,
 
 lxb_dom_element_t* HTML::Resolve(Element e) const
 {
-    switch ((unsigned long) e.Data()) {
-    case ELEMENT_NULL_VALUE: return lxb_dom_interface_element(dom);
-    case ELEMENT_HEAD_VALUE: return lxb_dom_interface_element(dom->head);
-    case ELEMENT_BODY_VALUE: return lxb_dom_interface_element(dom->body);
+    switch (e.dom_tag) {
+    case Element::ROOT: return lxb_dom_interface_element(dom);
+    case Element::HEAD: return lxb_dom_interface_element(dom->head);
+    case Element::BODY: return lxb_dom_interface_element(dom->body);
     default: return e.Data();
     }
 }

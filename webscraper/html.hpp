@@ -8,10 +8,6 @@
 
 #include "common/util.hpp"
 
-#define ELEMENT_NULL_VALUE 0x00
-#define ELEMENT_HEAD_VALUE 0x01
-#define ELEMENT_BODY_VALUE 0x02
-
 using std::string;
 
 // Concept CollectionCompatible for objects that can be inserted into Collection:
@@ -49,7 +45,11 @@ private:
 class Element
 {
 public:
+    friend class HTML;
+    enum DOMTag : size_t { ROOT, HEAD, BODY };
+
     Element(lxb_dom_element_t* element);
+    Element(DOMTag dom_tag);
 
     bool HasAttr(std::string_view attrname) const;
     std::string_view GetAttrValue(std::string_view attrname) const;
@@ -71,13 +71,11 @@ public:
 
     constexpr static auto collection_access = lxb_dom_collection_element;
 private:
-    lxb_dom_element_t* ptr;
+    union {
+        lxb_dom_element_t* ptr;
+        DOMTag dom_tag;
+    };
 };
-
-// Special element constants
-inline const Element ELEMENT_NULL { ELEMENT_NULL_VALUE };
-inline const Element ELEMENT_HEAD { (lxb_dom_element_t*) ELEMENT_HEAD_VALUE };
-inline const Element ELEMENT_BODY { (lxb_dom_element_t*) ELEMENT_BODY_VALUE };
 
 // Owning collection wrapper
 template<CollectionCompatible T>
@@ -157,28 +155,29 @@ public:
 
     // Searching functions
     Collection<Element> SearchTag(std::string_view tag,
-                                  Element root=ELEMENT_NULL) const;
+                                  Element root={ Element::ROOT }) const;
     void SearchTag(Collection<Element>& col, std::string_view tag,
-                   Element root=ELEMENT_NULL) const;
+                   Element root={ Element::ROOT }) const;
 
     Collection<Element> SearchAttr(std::string_view attr, std::string_view val,
-                                   Element root=ELEMENT_NULL,
+                                   Element root={ Element::ROOT },
                                    bool broad=false) const;
     void SearchAttr(Collection<Element>& col, std::string_view attr, std::string_view val,
-                    Element root=ELEMENT_NULL, bool broad=false) const;
+                    Element root={ Element::ROOT }, bool broad=false) const;
 
-    Collection<Element> SearchClass(std::string_view name, Element root=ELEMENT_NULL,
+    Collection<Element> SearchClass(std::string_view name,
+                                    Element root={ Element::ROOT },
                                     bool broad=false) const;
     void SearchClass(Collection<Element>& col, std::string_view name,
-                     Element root=ELEMENT_NULL, bool broad=false) const;
+                     Element root={ Element::ROOT }, bool broad=false) const;
 
 private:
     lxb_dom_element_t* Resolve(Element e) const;
 
     void _SearchTag(lxb_dom_collection_t* c, std::string_view tag,
-                    Element root=ELEMENT_NULL) const;
+                    Element root={ Element::ROOT }) const;
     void _SearchAttr(lxb_dom_collection_t* c, std::string_view attr, std::string_view val,
-                    Element root=ELEMENT_NULL, bool broad=false) const;
+                    Element root={ Element::ROOT }, bool broad=false) const;
 
     lxb_html_document_t* dom;
 };

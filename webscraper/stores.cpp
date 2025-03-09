@@ -8,7 +8,7 @@
 
 std::optional<Product> SVLike_GetProductAtURL(const Store& store, const HTML& html)
 {
-    Collection<Element> metatags = html.SearchTag("meta", ELEMENT_HEAD);
+    Collection<Element> metatags = html.SearchTag("meta", Element::HEAD);
 
     Product result {
         .store = store.id,
@@ -36,7 +36,7 @@ std::optional<Product> SVLike_GetProductAtURL(const Store& store, const HTML& ht
         }
     }
 
-    Collection<Element> priceper = html.SearchClass("PdpUnitPrice-", ELEMENT_BODY, true);
+    Collection<Element> priceper = html.SearchClass("PdpUnitPrice-", Element::BODY, true);
 
     if (!priceper.size()) {
         result.price_per_unit.unit = Unit::Piece;
@@ -75,7 +75,7 @@ ProductList SVLike_ParseProductSearch(const Store& store, std::string_view data,
     Collection<Element> item_listings, name_c, price_c, price_per_c, image_c, url_c;
 
     HTML html(data);
-    html.SearchClass(item_listings, "ColListing", ELEMENT_BODY, true);
+    html.SearchClass(item_listings, "ColListing", Element::BODY, true);
 
     for (Element e : item_listings) {
         html.SearchAttr(name_c, "data-testid", "ProductNameTestId", e, true);
@@ -169,7 +169,7 @@ ProductList TE_ParseProductSearch(std::string_view data, int depth)
 {
     HTML html(data);
     Collection<Element> item_listings = html.SearchClass("product-list--list-item",
-        ELEMENT_BODY, true);
+        Element::BODY, true);
 
     ProductList results(depth);
     Collection<Element> title_c, name_c, image_div_c, image_c, price_c, price_per_c;
@@ -237,7 +237,7 @@ string TE_GetProductSearchURL(std::string_view query)
 std::optional<Product> TE_GetProductAtURL(const HTML& html)
 {
     Collection<Element> product_json = html.SearchAttr("type", "application/ld+json",
-        ELEMENT_HEAD, false);
+        Element::HEAD, false);
 
     if (!product_json.size()) {
         Log(LogLevel::WARNING, "Product information not found for Tesco product page - "
@@ -274,7 +274,7 @@ std::optional<Product> TE_GetProductAtURL(const HTML& html)
     };
 
     Collection<Element> priceper = html.SearchClass("ddsweb-price__subtext",
-        ELEMENT_BODY, true);
+        Element::BODY, true);
 
     if (!priceper.size()) {
         result.price_per_unit = PricePU { result.item_price, Unit::Piece };
