@@ -10,11 +10,6 @@
 
 using std::string;
 
-// Concept CollectionCompatible for objects that can be inserted into Collection:
-// - Must implement member function Data() that returns a pointer
-// -   Must be constructible from this pointer
-// - Must have static function pointer collection_access with return type identical
-//     to that of Data()
 template<typename T>
 concept CollectionCompatible = requires(T t, lxb_dom_collection_t* col, size_t index) {
     requires std::is_constructible_v<T, decltype(t.Data())>;
@@ -82,7 +77,7 @@ template<CollectionCompatible T>
 class Collection
 {
 public:
-    struct Iterator // Only implements the bare minimum required for basic for loop
+    struct Iterator
     {
         Iterator() {}
         Iterator(const Collection* c, size_t i) : col(c), index(i) {}
@@ -96,17 +91,15 @@ public:
     };
 
     Collection() : ptr(nullptr) {}
-    // Merely encapsulates existing struct
+
     Collection(lxb_dom_collection_t* collection) : ptr(collection) {}
 
-    // Creates new underlying object
     Collection(lxb_dom_document_t* dom, size_t capacity)
     {
         ptr = lxb_dom_collection_make(dom, capacity);
         if (!ptr && dom) Log(LogLevel::WARNING, "Failed to create collection!");
     }
 
-    // Move constructors
     Collection(Collection&& other)
     {
         ptr = other.ptr;
@@ -120,7 +113,6 @@ public:
         return *this;
     }
 
-    // Deleted copy constructors
     Collection(const Collection& other) = delete;
     Collection& operator=(const Collection& other) = delete;
 
@@ -144,8 +136,8 @@ public:
     HTML();
     HTML(std::string_view data);
 
-    HTML(const HTML& other) = delete; // Not CopyConstructible
-    HTML& operator=(const HTML& other) = delete; // Not CopyAssignable
+    HTML(const HTML& other) = delete;
+    HTML& operator=(const HTML& other) = delete;
 
     ~HTML();
 
