@@ -53,7 +53,7 @@ public:
     Result& operator=(Result&& other) noexcept;
 
     template<typename T>
-    const T& Get() const { return *(T*)data; }
+    const T& Get() const { return *static_cast<T*>(data); }
     ResultType Type() const;
 
     ~Result();

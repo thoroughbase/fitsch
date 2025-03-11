@@ -9,7 +9,7 @@ Node::Node(lxb_dom_node_t* node) : ptr(node) {}
 std::string_view Node::Text(bool deep) const
 {
     if (!ptr || (ptr->type != LXB_DOM_NODE_TYPE_TEXT && !deep)) return {};
-    return (char*)lxb_dom_node_text_content(ptr, nullptr);
+    return reinterpret_cast<const char*>(lxb_dom_node_text_content(ptr, nullptr));
 }
 
 Node Node::Next() const { return lxb_dom_node_next(ptr); }
@@ -26,20 +26,21 @@ Element::Element(DOMTag dom_tag) : dom_tag(dom_tag) {}
 
 bool Element::HasAttr(std::string_view attrname) const
 {
-    return lxb_dom_element_attr_is_exist(ptr, (lxb_char_t*)attrname.data(),
-                                         attrname.size());
+    return lxb_dom_element_attr_is_exist(ptr,
+        reinterpret_cast<const lxb_char_t*>(attrname.data()), attrname.size());
 }
 
 std::string_view Element::GetAttrValue(std::string_view attrname) const
 {
     lxb_dom_attr_t* attr;
-    if (!(attr = lxb_dom_element_attr_by_name(ptr, (lxb_char_t*)attrname.data(),
-        attrname.size()))) {
+    if (!(attr = lxb_dom_element_attr_by_name(ptr,
+            reinterpret_cast<const lxb_char_t*>(attrname.data()),
+            attrname.size()))) {
         Log(LogLevel::WARNING, "Attribute {} not found!", attrname);
         return {};
     }
 
-    return (char*)lxb_dom_attr_value(attr, nullptr);
+    return reinterpret_cast<const char*>(lxb_dom_attr_value(attr, nullptr));
 }
 
 Node Element::FirstChild() const
@@ -64,7 +65,8 @@ HTML::~HTML() { lxb_html_document_destroy(dom); }
 void HTML::Parse(std::string_view data)
 {
     lxb_status_t status =
-        lxb_html_document_parse(dom, (lxb_char_t*)data.data(), data.size());
+        lxb_html_document_parse(dom,
+            reinterpret_cast<const lxb_char_t*>(data.data()), data.size());
 
     if (status != LXB_STATUS_OK) {
         Log(LogLevel::WARNING, "Reading page failed with status: {}", status);
@@ -155,8 +157,10 @@ void HTML::_SearchAttr(lxb_dom_collection_t* c, std::string_view attr,
 
     auto func = broad ? lxb_dom_elements_by_attr_contain : lxb_dom_elements_by_attr;
 
-    lxb_status_t status = func(rootptr, c, (lxb_char_t*)attr.data(), attr.size(),
-                               (lxb_char_t*)val.data(), val.size(), broad);
+    lxb_status_t status
+        = func(rootptr, c, reinterpret_cast<const lxb_char_t*>(attr.data()),
+               attr.size(), reinterpret_cast<const lxb_char_t*>(val.data()),
+               val.size(), broad);
 
     if (status != LXB_STATUS_OK)
         Log(LogLevel::WARNING, "SearchAttr failed with code {}", status);

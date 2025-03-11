@@ -18,7 +18,7 @@ int main()
 
     buxtehude::Initialise(
     [] (buxtehude::LogLevel level, std::string_view message) {
-        Log((LogLevel) level, "{}", message);
+        Log(static_cast<LogLevel>(level), "{}", message);
     });
 
     auto bclient = std::make_unique<buxtehude::Client>();

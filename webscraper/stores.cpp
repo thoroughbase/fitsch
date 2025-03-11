@@ -122,7 +122,7 @@ ProductList SVLike_ParseProductSearch(const Store& store, std::string_view data,
         }
 
         results.products.emplace_back(std::move(product),
-            QueryResultInfo { (int) results.products.size() });
+            QueryResultInfo { static_cast<int>(results.products.size()) });
 
         if (results.products.size() >= depth) break;
     }
@@ -219,7 +219,7 @@ ProductList TE_ParseProductSearch(std::string_view data, int depth)
         };
 
         results.products.emplace_back(std::move(product),
-            QueryResultInfo { (int) results.products.size() });
+            QueryResultInfo { static_cast<int>(results.products.size()) });
 
         if (depth != SEARCH_DEPTH_INDEFINITE && results.products.size() >= depth) break;
     }
@@ -334,7 +334,7 @@ ProductList AL_ParseProductSearch(std::string_view data, int depth)
         }
 
         results.products.emplace_back(std::move(product),
-            QueryResultInfo { (int) results.products.size() });
+            QueryResultInfo { static_cast<int>(results.products.size()) });
         if (results.products.size() >= depth && depth != SEARCH_DEPTH_INDEFINITE)
             break;
     }

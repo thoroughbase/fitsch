@@ -9,7 +9,7 @@
 
 static void Libevent_TimerCallback(int fd, short what, void* general_ctx)
 {
-    GeneralCURLContext* ctx = (GeneralCURLContext*) general_ctx;
+    GeneralCURLContext* ctx = static_cast<GeneralCURLContext*>(general_ctx);
 
     ctx->return_code = curl_multi_socket_action(ctx->multi_handle, CURL_SOCKET_TIMEOUT,
         0, &ctx->running_handles);
@@ -18,7 +18,7 @@ static void Libevent_TimerCallback(int fd, short what, void* general_ctx)
 
 static void Libevent_ReadWriteCallback(int fd, short what, void* general_ctx)
 {
-    GeneralCURLContext* ctx = (GeneralCURLContext*) general_ctx;
+    GeneralCURLContext* ctx = static_cast<GeneralCURLContext*>(general_ctx);
 
     int curl_what = 0;
     if (what & EV_READ) curl_what |= CURL_CSELECT_IN;
@@ -31,7 +31,7 @@ static void Libevent_ReadWriteCallback(int fd, short what, void* general_ctx)
 
 static void Libevent_InterruptCallback(int fd, short what, void* general_ctx)
 {
-    GeneralCURLContext* ctx = (GeneralCURLContext*) general_ctx;
+    GeneralCURLContext* ctx = static_cast<GeneralCURLContext*>(general_ctx);
 
     ctx->interrupt = true;
     event_base_loopbreak(ctx->ebase);
@@ -39,7 +39,7 @@ static void Libevent_InterruptCallback(int fd, short what, void* general_ctx)
 
 static void Libevent_AddTransferCallback(int fd, short what, void* handle_pair)
 {
-    auto ctx = (std::pair<CURL*, EasyHandleInfo>*) handle_pair;
+    auto ctx = static_cast<std::pair<CURL*, EasyHandleInfo>*>(handle_pair);
     auto& [easy_handle_to_add, handle_info] = *ctx;
 
     curl_multi_add_handle(handle_info.multi_handle, easy_handle_to_add);
@@ -59,8 +59,8 @@ static size_t CURL_WriteData(char* data, size_t size, size_t nmemb, std::string*
 static int CURL_SocketInfoCallback(CURL* easy_handle, int fd, int what, void* general_ctx,
     void* socket_ctx)
 {
-    GeneralCURLContext* g_ctx = (GeneralCURLContext*) general_ctx;
-    SocketCURLContext* s_ctx = (SocketCURLContext*) socket_ctx;
+    GeneralCURLContext* g_ctx = static_cast<GeneralCURLContext*>(general_ctx);
+    SocketCURLContext* s_ctx = static_cast<SocketCURLContext*>(socket_ctx);
 
     auto& sock_contexts = g_ctx->socket_contexts;
     if (!s_ctx) {
@@ -99,7 +99,7 @@ static int CURL_SocketInfoCallback(CURL* easy_handle, int fd, int what, void* ge
 
 static int CURL_TimerInfoCallback(CURLM* multi_handle, long timeout, void* general_ctx)
 {
-    GeneralCURLContext* ctx = (GeneralCURLContext*) general_ctx;
+    GeneralCURLContext* ctx = static_cast<GeneralCURLContext*>(general_ctx);
 
     if (ctx->timer_event) {
         event_free(ctx->timer_event);
@@ -108,7 +108,10 @@ static int CURL_TimerInfoCallback(CURLM* multi_handle, long timeout, void* gener
 
     if (timeout < 0) return 0;
 
-    timeval timer_val = { (int)timeout / 1000, ((int)timeout % 1000) * 1000 };
+    timeval timer_val = {
+        static_cast<int>(timeout / 1000),
+        static_cast<int>(timeout % 1000) * 1000
+    };
     ctx->timer_event = evtimer_new(ctx->ebase, Libevent_TimerCallback, general_ctx);
     evtimer_add(ctx->timer_event, &timer_val);
 
@@ -288,7 +291,7 @@ void CURLDriver::Drive()
 
             Log(LogLevel::WARNING,
                 "Error occurred during curl transfer: {} (CURLMcode = {})",
-                curl_multi_strerror(error_code), (int)error_code);
+                curl_multi_strerror(error_code), static_cast<int>(error_code));
             Log(LogLevel::INFO, "Re-registering handles & events...");
 
             event_free(general_context.timer_event);
@@ -322,7 +325,7 @@ void CURLDriver::Drive()
             if (error_code != CURLE_OK) {
                 Log(LogLevel::WARNING,
                     "Error occurred during curl transfer: {} (CURLcode = {})",
-                    curl_easy_strerror(error_code), (int)error_code);
+                    curl_easy_strerror(error_code), static_cast<int>(error_code));
             }
 
             EasyHandleInfo& info = easy_handles[message->easy_handle];
