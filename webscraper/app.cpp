@@ -151,7 +151,7 @@ static Result TC_GetQueriesDB(TaskContext ctx, App* app,
         // If query found, check to see if all stores contained & deep enough
         const QueryTemplate& q = qt[0];
         std::time_t now = std::time(nullptr);
-        if (q.depth < depth || now - q.timestamp > ENTRY_EXPIRY_TIME) {
+        if (q.depth < depth || now - q.timestamp > ENTRY_EXPIRY_TIME_SECONDS) {
             // Query not deep enough or expired, redo all stores
             missing = stores;
         } else {
@@ -198,7 +198,7 @@ App::App(std::string_view cfg_path)
         Log(static_cast<LogLevel>(l), "(buxtehude) {}", msg);
     });
 
-    Log(LogLevel::INFO, "Starting Fitsch {}", VERSION);
+    Log(LogLevel::INFO, "Starting Fitsch {}", FITSCH_VERSION);
 
     std::ifstream cfg_file(cfg_path);
 

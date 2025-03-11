@@ -14,8 +14,8 @@
 
 #include <buxtehude/buxtehude.hpp>
 
-#define VERSION "0.0.1"
-#define ENTRY_EXPIRY_TIME 86400 * 2
+constexpr std::string_view FITSCH_VERSION = "0.0.1";
+constexpr std::time_t ENTRY_EXPIRY_TIME_SECONDS = 86400 * 2;
 
 class App
 {

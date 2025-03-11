@@ -9,9 +9,8 @@
 #include <fmt/format.h>
 #include <fmt/chrono.h>
 
-#define MIN_LOG_LEVEL LogLevel::DEBUG
-
 enum class LogLevel { DEBUG = 0, INFO = 1, WARNING = 2, SEVERE = 3 };
+constexpr auto MIN_LOG_LEVEL = LogLevel::DEBUG;
 
 template <typename... T>
 void Log(LogLevel l, fmt::format_string<T...> format, T&&... args)
