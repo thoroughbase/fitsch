@@ -44,4 +44,15 @@ constexpr auto operator|(View&& view, range_to_dummy<T>&& container)
     return T { view.begin(), view.end() };
 }
 
+template<std::ranges::range Container, typename Callable>
+constexpr bool is_sorted(const Container& container, Callable&& predicate)
+{
+    for (auto iter = container.cbegin(); iter != container.cend(); ++iter) {
+        if (iter == container.cbegin()) continue;
+        if (!predicate(*(iter - 1), *iter)) return false;
+    }
+
+    return true;
+}
+
 }
