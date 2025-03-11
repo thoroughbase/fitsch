@@ -174,17 +174,12 @@ void from_json(const json& j, PricePU& p)
 
 // ProductList
 
-ProductList::ProductList(int d) : depth(d) {}
+ProductList::ProductList(size_t depth) : depth(depth) {}
 
 void ProductList::Add(const ProductList& other)
 {
     products.insert(products.end(), other.products.begin(), other.products.end());
-    if (depth == SEARCH_DEPTH_INDEFINITE && other.depth != depth) {
-        depth = other.depth;
-        return;
-    }
-    if (other.depth < depth && other.depth != SEARCH_DEPTH_INDEFINITE)
-        depth = other.depth;
+    if (other.depth < depth) depth = other.depth;
 }
 
 QueryTemplate ProductList::AsQueryTemplate(std::string_view querystr,

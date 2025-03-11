@@ -102,7 +102,7 @@ static Result TC_GetProduct_Fetch(TaskContext ctx, App* app, const std::string& 
 
 // Product list
 static Result TC_DoQuery_Parse(TaskContext ctx, const Store* store,
-    const std::string& data, int depth)
+    const std::string& data, size_t depth)
 {
     ProductList list = store->ParseProductSearch(data, depth);
 
@@ -113,7 +113,7 @@ static Result TC_DoQuery_Parse(TaskContext ctx, const Store* store,
 }
 
 static Result TC_DoQuery(TaskContext ctx, App* app, const std::string& query_string,
-    const StoreSelection& stores, int depth)
+    const StoreSelection& stores, size_t depth)
 {
     // Figure out what pages need to be fetched first
     for (StoreID id : stores) {
@@ -136,7 +136,7 @@ static Result TC_DoQuery(TaskContext ctx, App* app, const std::string& query_str
 }
 
 static Result TC_GetQueriesDB(TaskContext ctx, App* app,
-    const std::string& query_string, const StoreSelection& stores, int depth)
+    const std::string& query_string, const StoreSelection& stores, size_t depth)
 {
     // Get query template stored in database
     ProductList list(depth);
@@ -151,8 +151,7 @@ static Result TC_GetQueriesDB(TaskContext ctx, App* app,
         // If query found, check to see if all stores contained & deep enough
         const QueryTemplate& q = qt[0];
         std::time_t now = std::time(nullptr);
-        if (q.depth < depth || (!depth && q.depth)
-            || (!q.depth && depth) || now - q.timestamp > ENTRY_EXPIRY_TIME) {
+        if (q.depth < depth || now - q.timestamp > ENTRY_EXPIRY_TIME) {
             // Query not deep enough or expired, redo all stores
             missing = stores;
         } else {
@@ -167,7 +166,7 @@ static Result TC_GetQueriesDB(TaskContext ctx, App* app,
             auto relevant_ids = std::views::keys(
                 q.results | std::views::filter([depth] (auto& pair) {
                     auto& [id, info] = pair;
-                    return !(depth > 0 && info.relevance >= depth);
+                    return info.relevance < depth;
                 })
             ) | tb::range_to<std::vector<std::string>>();
             auto products = app->database.GetProducts(relevant_ids);

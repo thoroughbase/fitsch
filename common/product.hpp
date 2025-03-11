@@ -72,7 +72,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Product, name, description, image_url, url, i
 
 struct QueryResultInfo
 {
-    int relevance; // What place an item appears at for a particular search term
+    size_t relevance; // What place an item appears at for a particular search term
 };
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(QueryResultInfo, relevance);
 
@@ -83,16 +83,16 @@ struct QueryTemplate
     StoreSelection stores;
     std::unordered_map<std::string, QueryResultInfo> results;
     std::time_t timestamp;
-    int depth;
+    size_t depth;
 };
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(QueryTemplate, query_string, stores, results,
     timestamp, depth);
 
-constexpr int SEARCH_DEPTH_INDEFINITE = -1;
+constexpr size_t SEARCH_DEPTH_INDEFINITE = -1;
 
 struct ProductList
 {
-    ProductList(int depth = SEARCH_DEPTH_INDEFINITE);
+    ProductList(size_t depth = SEARCH_DEPTH_INDEFINITE);
 
     void Add(const ProductList& other);
 
@@ -101,5 +101,5 @@ struct ProductList
     std::vector<Product> AsProductVector() const;
 
     std::vector<std::pair<Product, QueryResultInfo>> products;
-    int depth;
+    size_t depth;
 };

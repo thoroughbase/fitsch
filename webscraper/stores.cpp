@@ -65,7 +65,7 @@ std::string SVLike_GetProductSearchURL(const Store& store, std::string_view quer
 }
 
 ProductList SVLike_ParseProductSearch(const Store& store, std::string_view data,
-                                      int depth)
+                                      size_t depth)
 {
     // TODO: Reimplement reading multiple pages
 
@@ -122,7 +122,7 @@ ProductList SVLike_ParseProductSearch(const Store& store, std::string_view data,
         }
 
         results.products.emplace_back(std::move(product),
-            QueryResultInfo { static_cast<int>(results.products.size()) });
+            QueryResultInfo { results.products.size() });
 
         if (results.products.size() >= depth) break;
     }
@@ -147,14 +147,14 @@ std::string SV_GetProductSearchURL(std::string_view query_string)
     return SVLike_GetProductSearchURL(stores::SuperValu, query_string);
 }
 
-ProductList SV_ParseProductSearch(std::string_view data, int depth)
+ProductList SV_ParseProductSearch(std::string_view data, size_t depth)
 {
     return SVLike_ParseProductSearch(stores::SuperValu, data, depth);
 }
 
 // Dunnes Stores
 
-ProductList DS_ParseProductSearch(std::string_view data, int depth)
+ProductList DS_ParseProductSearch(std::string_view data, size_t depth)
 {
     return SVLike_ParseProductSearch(stores::DunnesStores, data, depth);
 }
@@ -171,7 +171,7 @@ std::optional<Product> DS_GetProductAtURL(const HTML& html)
 
 // Tesco
 
-ProductList TE_ParseProductSearch(std::string_view data, int depth)
+ProductList TE_ParseProductSearch(std::string_view data, size_t depth)
 {
     HTML html(data);
     Collection<Element> item_listings = html.SearchClass("product-list--list-item",
@@ -219,9 +219,9 @@ ProductList TE_ParseProductSearch(std::string_view data, int depth)
         };
 
         results.products.emplace_back(std::move(product),
-            QueryResultInfo { static_cast<int>(results.products.size()) });
+            QueryResultInfo { results.products.size() });
 
-        if (depth != SEARCH_DEPTH_INDEFINITE && results.products.size() >= depth) break;
+        if (results.products.size() >= depth) break;
     }
 
     return results;
@@ -299,7 +299,7 @@ std::optional<Product> TE_GetProductAtURL(const HTML& html)
 
 // Aldi
 
-ProductList AL_ParseProductSearch(std::string_view data, int depth)
+ProductList AL_ParseProductSearch(std::string_view data, size_t depth)
 {
     json json_obj = json::parse(data);
 
@@ -334,8 +334,8 @@ ProductList AL_ParseProductSearch(std::string_view data, int depth)
         }
 
         results.products.emplace_back(std::move(product),
-            QueryResultInfo { static_cast<int>(results.products.size()) });
-        if (results.products.size() >= depth && depth != SEARCH_DEPTH_INDEFINITE)
+            QueryResultInfo { results.products.size() });
+        if (results.products.size() >= depth)
             break;
     }
 

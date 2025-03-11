@@ -14,7 +14,7 @@ struct Store
     std::string_view name, prefix, homepage, root_url;
     Region region;
 
-    ProductList (*ParseProductSearch)(std::string_view, int);
+    ProductList (*ParseProductSearch)(std::string_view, size_t);
     std::string (*GetProductSearchURL)(std::string_view);
     std::optional<Product> (*GetProductAtURL)(const HTML&);
     CURLOptions (*GetProductSearchCURLOptions)(std::string_view);
@@ -25,22 +25,26 @@ struct Store
 CURLOptions Default_GetProductSearchCURLOptions(std::string_view query);
 
 // SuperValu
-ProductList SV_ParseProductSearch(std::string_view data, int depth=0);
+ProductList SV_ParseProductSearch(std::string_view data,
+    size_t depth=SEARCH_DEPTH_INDEFINITE);
 std::string SV_GetProductSearchURL(std::string_view query);
 std::optional<Product> SV_GetProductAtURL(const HTML& html);
 
 // Tesco
-ProductList TE_ParseProductSearch(std::string_view data, int depth=0);
+ProductList TE_ParseProductSearch(std::string_view data,
+    size_t depth=SEARCH_DEPTH_INDEFINITE);
 std::string TE_GetProductSearchURL(std::string_view query);
 std::optional<Product> TE_GetProductAtURL(const HTML& html);
 
 // Dunnes Stores
-ProductList DS_ParseProductSearch(std::string_view data, int depth=0);
+ProductList DS_ParseProductSearch(std::string_view data,
+    size_t depth=SEARCH_DEPTH_INDEFINITE);
 std::string DS_GetProductSearchURL(std::string_view query);
 std::optional<Product> DS_GetProductAtURL(const HTML& html);
 
 // Aldi
-ProductList AL_ParseProductSearch(std::string_view data, int depth=0);
+ProductList AL_ParseProductSearch(std::string_view data,
+    size_t depth=SEARCH_DEPTH_INDEFINITE);
 std::string AL_GetProductSearchURL(std::string_view query);
 std::optional<Product> AL_GetProductAtURL(const HTML& html);
 CURLOptions AL_GetProductSearchCURLOptions(std::string_view query);
