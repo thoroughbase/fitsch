@@ -122,6 +122,24 @@ SocketCURLContext::~SocketCURLContext()
     if (read_write_event) event_free(read_write_event);
 }
 
+CURLHeaders::~CURLHeaders()
+{
+    if (header_list) curl_slist_free_all(header_list);
+}
+
+CURLHeaders::CURLHeaders(std::span<std::string_view> headers)
+: string_list(headers.begin(), headers.end())
+{
+    for (const std::string& header : string_list) {
+        curl_slist* success = curl_slist_append(header_list, header.c_str());
+        if (!success) {
+            Log(LogLevel::SEVERE, "Failed to create header list!");
+            return;
+        }
+        header_list = success;
+    }
+}
+
 // CURLDriver
 
 CURLDriver::CURLDriver(int pool_size, std::string_view user_agent)
@@ -186,11 +204,12 @@ void CURLDriver::Run()
     thread = std::move(thr);
 }
 
-void CURLDriver::PerformTransfer(std::string_view url, TransferDoneCallback&& cb)
+void CURLDriver::PerformTransfer(std::string_view url, TransferDoneCallback&& cb,
+    const CURLOptions& options)
 {
     std::lock_guard<std::mutex> guard(container_mutex);
 
-    PerformTransfer_NoLock(url, std::forward<TransferDoneCallback>(cb));
+    PerformTransfer_NoLock(url, std::forward<TransferDoneCallback>(cb), options);
 }
 
 bool CURLDriver::GlobalInit(long flags)
@@ -204,7 +223,8 @@ void CURLDriver::GlobalCleanup()
     curl_global_cleanup();
 }
 
-void CURLDriver::PerformTransfer_NoLock(std::string_view url, TransferDoneCallback&& cb)
+void CURLDriver::PerformTransfer_NoLock(std::string_view url, TransferDoneCallback&& cb,
+    const CURLOptions& options)
 {
     CURL* easy_handle = nullptr;
     EasyHandleInfo* handle_info = nullptr;
@@ -217,15 +237,30 @@ void CURLDriver::PerformTransfer_NoLock(std::string_view url, TransferDoneCallba
     }
 
     if (!easy_handle) {
-        pending.emplace(std::string(url), std::forward<TransferDoneCallback>(cb));
+        pending.emplace(std::string(url), std::forward<TransferDoneCallback>(cb),
+            options);
         return;
     }
 
+    switch (options.method) {
+    case CURLOptions::Method::GET:
+        curl_easy_setopt(easy_handle, CURLOPT_HTTPGET, 1);
+        break;
+    case CURLOptions::Method::POST:
+        curl_easy_setopt(easy_handle, CURLOPT_POST, 1);
+        curl_easy_setopt(easy_handle, CURLOPT_COPYPOSTFIELDS,
+            options.post_content.empty() ? "" : options.post_content.c_str());
+        break;
+    }
+
     curl_easy_setopt(easy_handle, CURLOPT_URL, url.data());
+    if (options.headers->header_list)
+        curl_easy_setopt(easy_handle, CURLOPT_HTTPHEADER, options.headers->header_list);
 
     handle_info->callback = std::move(cb);
     handle_info->available = false;
     handle_info->buffer.clear();
+    handle_info->options = options;
 
     // Initiating transfers via a libevent callback ensures that CURL callbacks
     // are only ever triggered from one thread for thread-safety with no locks
@@ -303,7 +338,8 @@ void CURLDriver::Drive()
             info.available = true;
 
             if (error_code != CURLE_OK)
-                pending.emplace(std::string(url), std::move(info.callback));
+                pending.emplace(std::string(url), std::move(info.callback),
+                    info.options);
 
             PerformNextInQueue();
         }

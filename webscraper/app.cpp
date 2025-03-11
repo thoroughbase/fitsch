@@ -119,6 +119,7 @@ static Result TC_DoQuery(TaskContext ctx, App* app, const std::string& query_str
     for (StoreID id : stores) {
         const Store* store = app->GetStore(id);
         std::string url = store->GetProductSearchURL(query_string);
+        CURLOptions request_options = store->GetProductSearchCURLOptions(query_string);
 
         auto handle = ctx.delegator.QueueExtraExternalTask(ctx.group_id);
 
@@ -128,7 +129,7 @@ static Result TC_DoQuery(TaskContext ctx, App* app, const std::string& query_str
                 Task { TC_DoQuery_Parse, store, std::string { data }, depth }
             );
             handle.Finish({});
-        });
+        }, request_options);
     }
 
     return {};
@@ -236,7 +237,8 @@ App::App(std::string_view cfg_path)
         StoreSelection stores {
             stores::SuperValu.id,
             stores::Tesco.id,
-            stores::DunnesStores.id
+            stores::DunnesStores.id,
+            stores::Aldi.id
         };
         for (const json& j : msg.content["terms"]) {
             auto term = j.get<std::string>();

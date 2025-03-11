@@ -8,7 +8,12 @@
 // Constants
 
 constexpr std::string_view UNIT_SUFFIXES[] = {
-	"", " each", "/kg", "/l", "/m²", "m"
+    "", " each", "/kg", "/l", "/m²", "m"
+};
+
+// MUST be sorted from longest to shortest
+constexpr std::array<std::string_view, 3> PRICE_UNIT_SEPARATORS = {
+    " per ", "/", " "
 };
 
 const std::unordered_map<Currency, std::string_view> CURRENCY_SYMBOLS = {
@@ -17,17 +22,22 @@ const std::unordered_map<Currency, std::string_view> CURRENCY_SYMBOLS = {
 
 const std::unordered_map<std::string_view, std::pair<Unit, float>>
   UNIT_CONVERSIONS = {
-    { "kg",     { Unit::Kilogrammes, 1 } },
-    { "g",      { Unit::Kilogrammes, 1000 } },
-    { "75cl",   { Unit::Litres, 1 / 0.75f } },
-    { "70cl",   { Unit::Litres, 1 / 0.7f } },
-    { "l",      { Unit::Litres, 1 } },
-    { "litre",  { Unit::Litres, 1 } },
-    { "ml",     { Unit::Litres, 1000 } },
-    { "m²",     { Unit::SqMetres, 1 } },
-    { "each",   { Unit::Piece, 1 } },
-    { "100sht", { Unit::Piece, 0.01f } },
-    { "metre",  { Unit::Metres, 1 } }
+    { "kg",         { Unit::Kilogrammes, 1 } },
+    { "kg drained", { Unit::Kilogrammes, 1 } },   // FIXME: Treated the same for now
+    { "g",          { Unit::Kilogrammes, 1000 } },
+    { "100g",       { Unit::Kilogrammes, 10 } },
+    { "75cl",       { Unit::Litres, 1 / 0.75f } },
+    { "70cl",       { Unit::Litres, 1 / 0.7f } },
+    { "l",          { Unit::Litres, 1 } },
+    { "litre",      { Unit::Litres, 1 } },
+    { "ml",         { Unit::Litres, 1000 } },
+    { "100ml",      { Unit::Litres, 10 } },
+    { "m²",         { Unit::SqMetres, 1 } },
+    { "each",       { Unit::Piece, 1 } },
+    { "100sht",     { Unit::Piece, 0.01f } },
+    { "100 sheets", { Unit::Piece, 0.01f } },
+    { "metre",      { Unit::Metres, 1 } },
+    { "m",          { Unit::Metres, 1 } }
 };
 
 // Price
@@ -105,7 +115,7 @@ void from_json(const json& j, Price& p)
 
 std::string PricePU::ToString() const
 {
-	const std::string_view& suffix = UNIT_SUFFIXES[static_cast<size_t>(unit)];
+    const std::string_view& suffix = UNIT_SUFFIXES[static_cast<size_t>(unit)];
     return price.ToString().append(suffix.begin(), suffix.end());
 }
 
@@ -113,20 +123,28 @@ PricePU PricePU::FromString(std::string_view str)
 {
     if (str.empty()) return {};
 
-    size_t delimiter;
-    if ((delimiter = str.find('/')) == std::string::npos) {
-        if ((delimiter = str.find(' ')) == std::string::npos) {
-            Log(LogLevel::WARNING, "Unrecognised delimiter/unit for '{}'!", str);
-            return {};
+    size_t separator_index;
+    auto separator = std::ranges::find_if(PRICE_UNIT_SEPARATORS,
+        [&separator_index, str] (std::string_view sep) {
+            separator_index = str.find(sep);
+            return separator_index != std::string::npos;
         }
+    );
+
+    if (separator == PRICE_UNIT_SEPARATORS.end()) {
+        Log(LogLevel::WARNING, "Unrecognised delimiter/unit for '{}'!", str);
+        return {};
     }
 
+    separator_index += separator->size() - 1;
+
     std::string_view unit_view = str;
-    unit_view.remove_prefix(delimiter + 1);
-    std::string_view price_view(str.data(), delimiter);
+    unit_view.remove_prefix(separator_index + 1);
+    std::string_view price_view(str.data(), separator_index);
 
     if (!UNIT_CONVERSIONS.contains(unit_view)) {
         Log(LogLevel::WARNING, "Unrecognised unit for '{}'!", str);
+        Log(LogLevel::WARNING, "Offending unit: {}", unit_view);
         return {};
     }
 

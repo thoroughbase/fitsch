@@ -11,6 +11,7 @@ int main(int argc, char** argv)
     a.AddStore(&stores::SuperValu);
     a.AddStore(&stores::Tesco);
     a.AddStore(&stores::DunnesStores);
+    a.AddStore(&stores::Aldi);
 
     std::string_view url = "https://shop.supervalu.ie/sm/delivery/rsid/5550/"
     			 	  	   "product/batchelors-chick-peas-225-g-id-1018033000";

@@ -130,6 +130,11 @@ ProductList SVLike_ParseProductSearch(const Store& store, std::string_view data,
     return results;
 }
 
+CURLOptions Default_GetProductSearchCURLOptions(std::string_view query)
+{
+    return {};
+}
+
 // SuperValu
 
 std::optional<Product> SV_GetProductAtURL(const HTML& html)
@@ -290,4 +295,72 @@ std::optional<Product> TE_GetProductAtURL(const HTML& html)
     }
 
     return result;
+}
+
+// Aldi
+
+ProductList AL_ParseProductSearch(std::string_view data, int depth)
+{
+    json json_obj = json::parse(data);
+
+    json& items = json_obj["Suggestions"];
+    ProductList results;
+    for (json& item : items) {
+        unsigned int price = item["ListPrice"].get<float>() * 100;
+
+        Product product {
+            .store = stores::Aldi.id, .name = item["FullDisplayName"],
+            .description = {},
+            .id = fmt::format("{}{}", stores::Aldi.prefix,
+                item["ProductId"].get<std::string>()),
+            .image_url = item["ImageUrl"],
+            .item_price = Price { Currency::EUR, price },
+            .timestamp = std::time(nullptr),
+            .url = fmt::format("{}/{}", stores::Aldi.root_url,
+                item["Url"].get<std::string>())
+        };
+
+        bool has_ppu = item["HasUnitPrice"];
+        if (has_ppu) {
+            product.price_per_unit = PricePU::FromString(
+                fmt::format("{} {}", item["UnitPrice"].get<std::string>(),
+                    item["UnitPriceDeclaration"].get<std::string>())
+            );
+        } else {
+            product.price_per_unit = {
+                .price = product.item_price,
+                .unit = Unit::Piece
+            };
+        }
+
+        results.products.emplace_back(std::move(product),
+            QueryResultInfo { (int) results.products.size() });
+        if (results.products.size() >= depth && depth != SEARCH_DEPTH_INDEFINITE)
+            break;
+    }
+
+    return results;
+}
+
+std::string AL_GetProductSearchURL(std::string_view query)
+{
+    return fmt::format("{}/api/aldisearch/autocomplete?limit=25",
+        stores::Aldi.root_url);
+}
+
+std::optional<Product> AL_GetProductAtURL(const HTML& html)
+{
+    // TODO: Implement
+    return {};
+}
+
+CURLOptions AL_GetProductSearchCURLOptions(std::string_view query)
+{
+    return {
+        .post_content = json {
+            { "Query", query }
+        }.dump(),
+        .method = CURLOptions::Method::POST,
+        .headers = &CURLHEADERS_ALDI
+    };
 }
