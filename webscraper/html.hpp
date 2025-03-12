@@ -88,7 +88,7 @@ public:
         size_t index;
     };
 
-    Collection() : ptr(nullptr) {}
+    Collection() = default;
 
     Collection(lxb_dom_collection_t* collection) : ptr(collection) {}
 
@@ -98,16 +98,11 @@ public:
         if (!ptr && dom) Log(LogLevel::WARNING, "Failed to create collection!");
     }
 
-    Collection(Collection&& other)
-    {
-        ptr = other.ptr;
-        other.ptr = nullptr;
-    }
+    Collection(Collection&& other) : ptr(std::exchange(other.ptr, nullptr)) {}
 
     Collection& operator=(Collection&& other)
     {
-        ptr = other.ptr;
-        other.ptr = nullptr;
+        ptr = std::exchange(other.ptr, nullptr);
         return *this;
     }
 
@@ -125,7 +120,7 @@ public:
     Iterator end() const { return { this, size() }; }
 
 private:
-    lxb_dom_collection_t* ptr;
+    lxb_dom_collection_t* ptr = nullptr;
 };
 
 class HTML
