@@ -5,6 +5,7 @@
 #include <nlohmann/json.hpp>
 
 #include "common/validate.hpp"
+#include "common/product.hpp"
 
 using nlohmann::json;
 
@@ -47,11 +48,17 @@ std::future<QueryResultsMap> QueryHandler::SendQuery(std::string_view query)
 
     request_info.results.emplace(query, std::vector<Product> {});
 
+    auto stores = json::array({
+        StoreID::SUPERVALU, StoreID::DUNNES_STORES, StoreID::TESCO, StoreID::ALDI
+    });
+
     bclient.Write({
         .dest = webscraper_name, .type = "query", .only_first = true,
         .content = {
             { "terms", json::array({ query }) },
-            { "request-id", id }
+            { "request-id", id },
+            { "depth", 10 },
+            { "stores", std::move(stores) }
         }
     });
 

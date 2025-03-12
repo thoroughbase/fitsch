@@ -118,6 +118,10 @@ static Result TC_DoQuery(TaskContext ctx, App* app, const std::string& query_str
     // Figure out what pages need to be fetched first
     for (StoreID id : stores) {
         const Store* store = app->GetStore(id);
+        if (store == nullptr) {
+            Log(LogLevel::WARNING, "Invalid store ID {}", static_cast<int>(id));
+            continue;
+        }
         std::string url = store->GetProductSearchURL(query_string);
         CURLOptions request_options = store->GetProductSearchCURLOptions(query_string);
 
@@ -233,17 +237,14 @@ App::App(std::string_view cfg_path)
                         const buxtehude::Message& msg) {
         if (!buxtehude::ValidateJSON(msg.content, validate::QUERY)) return;
         int request_id = msg.content["request-id"];
-        StoreSelection stores {
-            stores::SuperValu.id,
-            stores::Tesco.id,
-            stores::DunnesStores.id,
-            stores::Aldi.id
-        };
+        size_t depth = msg.content["depth"];
+        StoreSelection stores = msg.content["stores"];
+
         for (const json& j : msg.content["terms"]) {
             auto term = j.get<std::string>();
             delegator.QueueTasks(
                 { SendQuery, this, msg.src, term, stores, request_id },
-                Task { TC_GetQueriesDB, this, term, stores, 10 }
+                Task { TC_GetQueriesDB, this, term, stores, depth }
             );
         }
     });
@@ -258,7 +259,11 @@ App::~App()
 
 void App::AddStore(const Store* store) { stores.emplace(store->id, store); }
 
-const Store* App::GetStore(StoreID id) { return stores[id]; }
+const Store* App::GetStore(StoreID id)
+{
+    if (!stores.contains(id)) return nullptr;
+    return stores[id];
+}
 
 void App::GetProductAtURL(StoreID store, std::string_view item_url)
 {

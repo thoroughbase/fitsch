@@ -9,6 +9,20 @@ namespace validate
 
 using nlohmann::json;
 
+inline const auto IsNumberArray = [] (const json& j) -> bool {
+    if (!j.is_array()) return false;
+    for (auto& element : j)
+        if (!element.is_number()) return false;
+    return true;
+};
+
+inline const auto IsStringArray = [] (const json& j) -> bool {
+    if (!j.is_array()) return false;
+    for (auto& element : j)
+        if (!element.is_string()) return false;
+    return true;
+};
+
 inline const buxtehude::ValidationSeries QUERY_RESULT = {
     { "/term"_json_pointer, buxtehude::predicates::NotEmpty },
     { "/items"_json_pointer, [] (const json& j) { return j.is_array(); } },
@@ -16,8 +30,10 @@ inline const buxtehude::ValidationSeries QUERY_RESULT = {
 };
 
 inline const buxtehude::ValidationSeries QUERY = {
-    { "/terms"_json_pointer, [] (const json& j) { return j.is_array(); } },
-    { "/request-id"_json_pointer, [] (const json& j) { return j.is_number(); } }
+    { "/terms"_json_pointer, IsStringArray },
+    { "/request-id"_json_pointer, [] (const json& j) { return j.is_number(); } },
+    { "/stores"_json_pointer, IsNumberArray },
+    { "/depth"_json_pointer, [] (const json& j) { return j.is_number(); } }
 };
 
 }

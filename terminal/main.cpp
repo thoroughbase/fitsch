@@ -9,6 +9,7 @@
 #include <fmt/core.h>
 
 #include "common/validate.hpp"
+#include "common/product.hpp"
 
 using nlohmann::json;
 
@@ -59,12 +60,17 @@ int main()
         if (input == "quit") break;
 
         std::vector<std::string> terms = split(input, ',');
+        auto stores = json::array({
+            StoreID::SUPERVALU, StoreID::DUNNES_STORES, StoreID::TESCO, StoreID::ALDI
+        });
 
         terminal.Write({
             .type = "query", .dest = "webscraper", .only_first = true,
             .content = {
                 { "terms", terms },
-                { "request-id", 0 }
+                { "request-id", 0 },
+                { "stores", std::move(stores) },
+                { "depth", 10 }
             }
         });
     }
