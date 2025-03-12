@@ -6,8 +6,11 @@
 #include <vector>
 #include <mutex>
 #include <atomic>
+#include <span>
+#include <thread>
 #include <type_traits>
 #include <memory>
+
 
 struct TaskContext;
 struct Result;
@@ -42,7 +45,7 @@ public:
 
     template<typename T, typename Deleter = std::default_delete<T>>
     Result(ResultType rt, T* ptr, Deleter&& ubdel = std::default_delete<T>{})
-    : type(rt), data(ptr), deleter(std::bind(std::forward<Deleter>(ubdel), ptr)) {}
+    : deleter(std::bind(std::forward<Deleter>(ubdel), ptr)), data(ptr), type(rt) {}
 
     Result(ResultType rt, std::nullptr_t ptr) : type(rt) {}
 
@@ -59,22 +62,22 @@ public:
     ~Result();
 
 private:
-    ResultType type = ResultType::EMPTY;
-    void* data = nullptr;
     BoundDeleter deleter = nullptr;
+    void* data = nullptr;
+    ResultType type = ResultType::EMPTY;
 };
 
 struct ResultsContainer
 {
-    int expecting = 0;
-    std::vector<Result> results;
     ResultCallback result_cb;
+    std::vector<Result> results;
+    size_t expecting = 0;
 };
 
 struct TaskContext
 {
-    unsigned group_id;
     Delegator& delegator;
+    unsigned group_id;
 };
 
 struct UnboundResultCallback
@@ -103,8 +106,8 @@ class Delegator
 public:
     Delegator(int max_tasks);
 
-    template<std::same_as<Task>... Tasks>
-    unsigned QueueTasks(UnboundResultCallback&& ub_rcb, Tasks&& ...tasks)
+    template<size_t N=std::dynamic_extent>
+    unsigned QueueTasks(UnboundResultCallback&& ub_rcb, std::span<Task, N> tasks)
     {
         std::lock_guard<std::mutex> tasks_guard(task_mutex);
         std::lock_guard<std::mutex> results_guard(results_mutex);
@@ -112,27 +115,27 @@ public:
         ++current_group_id;
 
         auto [iterator, success] = results.emplace(current_group_id, ResultsContainer {
-            .expecting = sizeof...(tasks),
+            .expecting = tasks.size(),
             .results = {},
             .result_cb = std::move(ub_rcb.result_cb)
         });
 
         auto& [key, container_ref] = *iterator;
 
-        container_ref.results.reserve(sizeof...(tasks));
+        container_ref.results.reserve(tasks.size());
 
-        TryRun(current_group_id, std::forward<Tasks>(tasks)...);
+        TryRun(current_group_id, tasks);
         return current_group_id;
     }
 
-    template<std::same_as<Task>... Tasks>
-    void QueueExtraTasks(unsigned id, Tasks&& ...tasks)
+    template<size_t N=std::dynamic_extent>
+    void QueueExtraTasks(unsigned id, std::span<Task, N> tasks)
     {
         std::lock_guard<std::mutex> guard(task_mutex);
 
         auto& [key, container_ref] = *(results.find(id));
-        container_ref.expecting += sizeof...(tasks);
-        TryRun(id, std::forward<Tasks>(tasks)...);
+        container_ref.expecting += tasks.size();
+        TryRun(id, tasks);
     }
 
     ExternalTaskHandle QueueExternalTask(UnboundResultCallback&& ub_rcb);
@@ -141,14 +144,32 @@ public:
     void RunNextTask();
 
 private:
-    template<std::same_as<Task>... Tasks>
-    void TryRun(unsigned id, Task&& task, Tasks&& ...tasks)
+    template<size_t N=std::dynamic_extent>
+    void TryRun(unsigned id, std::span<Task, N> tasks)
     {
-        TryRun(id, std::forward<Task>(task));
-        TryRun(id, std::forward<Tasks>(tasks)...);
-    }
+        for (Task& task : tasks) {
+            task.group_id = id;
+            if (running_tasks >= max_concurrent_tasks) {
+                task_queue.emplace(std::move(task));
+                return;
+            }
 
-    void TryRun(unsigned id, Task&& task);
+            ++running_tasks;
+
+            std::thread thread([this] (Task&& task) {
+                Result result = task.task_cb(TaskContext {
+                    .delegator = *this,
+                    .group_id = task.group_id
+                });
+                ProcessResult(task.group_id, std::move(result));
+
+                --running_tasks;
+                RunNextTask();
+            }, std::move(task));
+
+            thread.detach();
+        }
+    }
 
     void ProcessResult(unsigned id, Result&& result);
 

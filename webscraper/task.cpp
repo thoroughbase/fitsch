@@ -3,10 +3,12 @@
 #include <thread>
 #include <utility>
 
+#include "common/util.hpp"
+
 // Result
 
-Result::Result(Result&& other) noexcept : type(other.type),
-    deleter(std::move(other.deleter))
+Result::Result(Result&& other) noexcept : deleter(std::move(other.deleter)),
+    type(other.type)
 {
     data = std::exchange(other.data, nullptr);
 }
@@ -45,7 +47,7 @@ void Delegator::RunNextTask()
 
     if (task_queue.size()) {
         Task& task = task_queue.front();
-        TryRun(task.group_id, std::move(task));
+        TryRun(task.group_id, tb::make_span({ std::move(task) }));
         task_queue.pop();
     }
 }
@@ -73,27 +75,6 @@ ExternalTaskHandle Delegator::QueueExtraExternalTask(unsigned id)
     ++container_ref.expecting;
 
     return { *this, id };
-}
-
-void Delegator::TryRun(unsigned id, Task&& task)
-{
-    task.group_id = id;
-    if (running_tasks >= max_concurrent_tasks) {
-        task_queue.emplace(std::move(task));
-        return;
-    }
-
-    ++running_tasks;
-
-    std::thread thread([this] (Task&& task) {
-        Result result = task.task_cb(TaskContext { task.group_id, *this });
-        ProcessResult(task.group_id, std::move(result));
-
-        --running_tasks;
-        RunNextTask();
-    }, std::move(task));
-
-    thread.detach();
 }
 
 void Delegator::ProcessResult(unsigned group_id, Result&& result)

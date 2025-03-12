@@ -91,9 +91,9 @@ static Result TC_GetProduct_Fetch(TaskContext ctx, App* app, const std::string& 
     auto handle = ctx.delegator.QueueExtraExternalTask(ctx.group_id);
     app->curl_driver->PerformTransfer(url, [handle, ctx, store] (auto data, auto url,
         CURLcode code) {
-        ctx.delegator.QueueExtraTasks(ctx.group_id,
+        ctx.delegator.QueueExtraTasks(ctx.group_id, tb::make_span({
             Task { TC_GetProduct_Parse, store, std::string { data } }
-        );
+        }));
         handle.Finish({});
     });
 
@@ -129,9 +129,9 @@ static Result TC_DoQuery(TaskContext ctx, App* app, const std::string& query_str
 
         app->curl_driver->PerformTransfer(url,
         [handle, ctx, store, depth] (auto data, auto url, CURLcode code) {
-            ctx.delegator.QueueExtraTasks(ctx.group_id,
+            ctx.delegator.QueueExtraTasks(ctx.group_id, tb::make_span({
                 Task { TC_DoQuery_Parse, store, std::string { data }, depth }
-            );
+            }));
             handle.Finish({});
         }, request_options);
     }
@@ -182,9 +182,9 @@ static Result TC_GetQueriesDB(TaskContext ctx, App* app,
 
     if (missing.size()) {
         // Queue tasks to retrieve missing info
-        ctx.delegator.QueueExtraTasks(ctx.group_id,
+        ctx.delegator.QueueExtraTasks(ctx.group_id, tb::make_span({
             Task { TC_DoQuery, app, query_string, missing, depth }
-        );
+        }));
     }
 
     return {
@@ -244,7 +244,9 @@ App::App(std::string_view cfg_path)
             auto term = j.get<std::string>();
             delegator.QueueTasks(
                 { SendQuery, this, msg.src, term, stores, request_id },
-                Task { TC_GetQueriesDB, this, term, stores, depth }
+                tb::make_span({
+                    Task { TC_GetQueriesDB, this, term, stores, depth }
+                })
             );
         }
     });
@@ -272,7 +274,10 @@ void App::GetProductAtURL(StoreID store, std::string_view item_url)
         return;
     }
 
-    delegator.QueueTasks({ PrintProduct, this, std::string { item_url } },
-        Task { TC_GetProduct_Fetch, this, std::string { item_url }, stores[store] }
+    delegator.QueueTasks(
+        { PrintProduct, this, std::string { item_url } },
+        tb::make_span({
+            Task { TC_GetProduct_Fetch, this, std::string { item_url }, stores[store] }
+        })
     );
 }
