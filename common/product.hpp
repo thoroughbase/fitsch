@@ -18,8 +18,8 @@ enum class Region { IE };
 
 enum class Unit
 {
-	None = 0, Piece = 1, Kilogrammes = 2, Litres = 3,
-	SqMetres = 4, Metres = 5
+    None = 0, Piece = 1, Kilogrammes = 2, Litres = 3,
+    SqMetres = 4, Metres = 5
 };
 
 enum class Currency { EUR };

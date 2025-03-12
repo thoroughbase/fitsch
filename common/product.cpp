@@ -16,7 +16,7 @@ constexpr std::array<std::string_view, 3> PRICE_UNIT_SEPARATORS = {
 };
 
 static_assert(tb::is_sorted(PRICE_UNIT_SEPARATORS, [] (auto& a, auto& b) {
-	return a.size() >= b.size();
+    return a.size() >= b.size();
 }), "Price unit separators array must be sorted from longest to shortest");
 
 const std::unordered_map<Currency, std::string_view> CURRENCY_SYMBOLS = {
