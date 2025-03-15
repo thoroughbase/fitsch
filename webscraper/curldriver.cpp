@@ -332,17 +332,12 @@ void CURLDriver::Drive()
 
             char* url = nullptr;
             curl_easy_getinfo(message->easy_handle, CURLINFO_EFFECTIVE_URL, &url);
-            if (error_code == CURLE_OK) {
-                if (info.callback)
-                    info.callback(info.buffer, url, message->data.result);
-            }
+
+            if (info.callback)
+                info.callback(info.buffer, url, error_code);
 
             curl_multi_remove_handle(multi_handle, message->easy_handle);
             info.available = true;
-
-            if (error_code != CURLE_OK)
-                pending.emplace(std::string(url), std::move(info.callback),
-                    info.options);
 
             PerformNextInQueue();
         }

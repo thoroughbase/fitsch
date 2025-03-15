@@ -94,9 +94,13 @@ static Result TC_GetProduct_Fetch(TaskContext ctx, App* app, const std::string& 
     auto handle = ctx.delegator.QueueExtraExternalTask(ctx.group_id);
     app->curl_driver->PerformTransfer(url, [handle, ctx, store] (auto data, auto url,
         CURLcode code) {
-        ctx.delegator.QueueExtraTasks(ctx.group_id, tb::make_span({
-            Task { TC_GetProduct_Parse, store, std::string { data } }
-        }));
+        if (code == CURLE_OK) {
+            ctx.delegator.QueueExtraTasks(ctx.group_id, tb::make_span({
+                Task { TC_GetProduct_Parse, store, std::string { data } }
+            }));
+        } else {
+            handle.Finish({ ResultType::GENERIC_ERROR, nullptr });
+        }
         handle.Finish({});
     });
 
