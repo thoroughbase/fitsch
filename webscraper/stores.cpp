@@ -252,7 +252,15 @@ std::optional<Product> TE_GetProductAtURL(const HTML& html)
         return {};
     }
 
-    json root_json_obj = json::parse(product_json[0].FirstChild().Text());
+    json root_json_obj;
+
+    try {
+         root_json_obj = json::parse(product_json[0].FirstChild().Text());
+    } catch (const json::parse_error& e) {
+        Log(LogLevel::WARNING, "Failed to parse Tesco product info: {}", e.what());
+        return {};
+    }
+
     json& graph = root_json_obj["@graph"];
     auto iterator = std::find_if(graph.begin(), graph.end(), [] (const json& j) {
         return j["@type"].get<std::string>() == "Product";
@@ -301,7 +309,13 @@ std::optional<Product> TE_GetProductAtURL(const HTML& html)
 
 ProductList AL_ParseProductSearch(std::string_view data, size_t depth)
 {
-    json json_obj = json::parse(data);
+    json json_obj;
+    try {
+        json_obj = json::parse(data);
+    } catch (const json::parse_error& e) {
+        Log(LogLevel::WARNING, "Failed to parse Aldi response: {}", e.what());
+        return {};
+    }
 
     json& items = json_obj["Suggestions"];
     ProductList results;
