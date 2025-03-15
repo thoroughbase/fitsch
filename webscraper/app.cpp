@@ -62,6 +62,9 @@ static void SendQuery(const std::vector<Result>& results, App* app,
             { "term", query_string },
             { "request-id", request_id }
         }
+    }).if_err([app] (buxtehude::WriteError e) {
+        app->bclient->Close();
+        Log(LogLevel::WARNING, "Failed to write back query-result - connection closed");
     });
 
     if (upload) {
@@ -222,9 +225,13 @@ App::App(std::string_view cfg_path)
 
     database.Connect({mongouri});
 
-    bclient = std::make_unique<buxtehude::Client>();
-    bclient->preferences.format = buxtehude::MSGPACK;
-    if (!bclient->IPConnect("localhost", 1637, "webscraper")) {
+    bclient = std::make_unique<buxtehude::Client>(buxtehude::ClientPreferences {
+        .format = buxtehude::MessageFormat::MSGPACK,
+        .teamname = "webscraper"
+    });
+
+    if (auto connect_err = bclient->IPConnect("localhost", 1637);
+        connect_err.is_error()) {
         Log(LogLevel::WARNING, "Failed to connect to buxtehude server");
         bclient->Close();
         bclient.reset();

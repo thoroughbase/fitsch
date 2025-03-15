@@ -6,6 +6,7 @@
 
 #include "common/validate.hpp"
 #include "common/product.hpp"
+#include "common/util.hpp"
 
 using nlohmann::json;
 
@@ -60,6 +61,9 @@ std::future<QueryResultsMap> QueryHandler::SendQuery(std::string_view query)
             { "depth", 10 },
             { "stores", std::move(stores) }
         }
+    }).if_err([this] (buxtehude::WriteError) {
+        Log(LogLevel::WARNING, "Failed to write request, connection closed");
+        bclient.Close();
     });
 
     return request_info.promise.get_future();

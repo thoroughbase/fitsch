@@ -21,13 +21,15 @@ int main()
         Log(static_cast<LogLevel>(level), "{}", message);
     });
 
-    auto bclient = std::make_unique<buxtehude::Client>();
-    bclient->preferences.format = buxtehude::MSGPACK;
+    auto bclient = std::make_unique<buxtehude::Client>(buxtehude::ClientPreferences {
+        .teamname = "webserver",
+        .format = buxtehude::MessageFormat::MSGPACK
+    });
 
-    if (!bclient->IPConnect("localhost", 1637, "webserver")) {
+    bclient->IPConnect("localhost", 1637).if_err([] (buxtehude::ConnectError) {
         Log(LogLevel::SEVERE, "Failed to connect to buxtehude server");
-        return 1;
-    }
+        std::exit(1);
+    });
 
     QueryHandler query_handler(*bclient.get(), "webscraper");
 

@@ -35,10 +35,18 @@ int main()
     buxtehude::Initialise();
 
     Server server;
-    server.IPServer(1637);
+    server.IPServer(1637).if_err([] (ListenError) {
+        fmt::print("Failed to start buxtehude INET server, exitting...\n");
+        std::exit(1);
+    });
+
     server.Run();
 
-    Client terminal(server, "terminal");
+    Client terminal({
+        .teamname = "terminal",
+    });
+
+    terminal.InternalConnect(server);
 
     terminal.AddHandler("query-result", [] (Client& cl, const Message& m) {
         if (!ValidateJSON(m.content, validate::QUERY_RESULT)) return;
@@ -64,7 +72,7 @@ int main()
             StoreID::SUPERVALU, StoreID::DUNNES_STORES, StoreID::TESCO, StoreID::ALDI
         });
 
-        terminal.Write({
+        [[maybe_unused]] auto _ = terminal.Write({
             .type = "query", .dest = "webscraper", .only_first = true,
             .content = {
                 { "terms", terms },
