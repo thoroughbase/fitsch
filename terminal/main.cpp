@@ -35,18 +35,19 @@ int main()
     buxtehude::Initialise();
 
     Server server;
-    server.IPServer(1637).if_err([] (ListenError) {
-        fmt::print("Failed to start buxtehude INET server, exitting...\n");
+    server.InternalServer().if_err([] (AllocError) {
+        fmt::print("Failed to start buxtehude server, exiting...\n");
         std::exit(1);
     });
 
-    server.Run();
+    server.IPServer(1637).if_err([] (ListenError) {
+        fmt::print("Failed to start buxtehude INET server, exiting...\n");
+        std::exit(1);
+    });
 
     Client terminal({
         .teamname = "terminal",
     });
-
-    terminal.InternalConnect(server);
 
     terminal.AddHandler("query-result", [] (Client& cl, const Message& m) {
         if (!ValidateJSON(m.content, validate::QUERY_RESULT)) return;
@@ -58,7 +59,10 @@ int main()
         }
     });
 
-    terminal.Run();
+    terminal.InternalConnect(server).if_err([] (ConnectError) {
+        fmt::print("Failed to start buxtehude terminal client, exiting...\n");
+        std::exit(1);
+    });
 
     std::string input;
 

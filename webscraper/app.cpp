@@ -62,8 +62,7 @@ static void SendQuery(const std::vector<Result>& results, App* app,
             { "term", query_string },
             { "request-id", request_id }
         }
-    }).if_err([app] (buxtehude::WriteError e) {
-        app->bclient->Close();
+    }).if_err([] (buxtehude::WriteError) {
         Log(LogLevel::WARNING, "Failed to write back query-result - connection closed");
     });
 
@@ -237,7 +236,6 @@ App::App(std::string_view cfg_path)
     if (auto connect_err = bclient->IPConnect("localhost", 1637);
         connect_err.is_error()) {
         Log(LogLevel::WARNING, "Failed to connect to buxtehude server");
-        bclient->Close();
         bclient.reset();
         return;
     }
@@ -261,8 +259,6 @@ App::App(std::string_view cfg_path)
             );
         }
     });
-
-    bclient->Run();
 }
 
 App::~App()

@@ -33,8 +33,6 @@ int main()
 
     QueryHandler query_handler(*bclient.get(), "webscraper");
 
-    bclient->Run();
-
     CROW_ROUTE(crow_app, "/")([] () {
         return crow::mustache::load("index.html").render();
     });

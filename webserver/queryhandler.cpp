@@ -61,9 +61,8 @@ std::future<QueryResultsMap> QueryHandler::SendQuery(std::string_view query)
             { "depth", 10 },
             { "stores", std::move(stores) }
         }
-    }).if_err([this] (buxtehude::WriteError) {
-        Log(LogLevel::WARNING, "Failed to write request, connection closed");
-        bclient.Close();
+    }).if_err([] (buxtehude::WriteError) {
+        Log(LogLevel::WARNING, "Failed to write request");
     });
 
     return request_info.promise.get_future();
