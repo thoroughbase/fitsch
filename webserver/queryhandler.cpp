@@ -10,12 +10,12 @@
 
 using nlohmann::json;
 
-QueryHandler::QueryHandler(buxtehude::Client& bclient, std::string_view webscraper)
+QueryHandler::QueryHandler(bux::Client& bclient, std::string_view webscraper)
     : bclient(bclient), webscraper_name(webscraper)
 {
-    bclient.AddHandler("query-result", [this] (buxtehude::Client& cl,
-        const buxtehude::Message& msg) {
-        if (!buxtehude::ValidateJSON(msg.content, validate::QUERY_RESULT)) {
+    bclient.AddHandler("query-result", [this] (bux::Client& cl,
+        const bux::Message& msg) {
+        if (!bux::ValidateJSON(msg.content, validate::QUERY_RESULT)) {
             Log(LogLevel::WARNING, "Invalid query-result message received!");
             return;
         }
@@ -61,7 +61,7 @@ std::future<QueryResultsMap> QueryHandler::SendQuery(std::string_view query)
             { "depth", 10 },
             { "stores", std::move(stores) }
         }
-    }).if_err([] (buxtehude::WriteError) {
+    }).if_err([] (bux::WriteError) {
         Log(LogLevel::WARNING, "Failed to write request");
     });
 

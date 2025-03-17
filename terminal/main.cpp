@@ -30,27 +30,27 @@ std::vector<std::string> split(std::string_view view, char delim)
 
 int main()
 {
-    using namespace buxtehude;
+    namespace bux = buxtehude;
 
-    buxtehude::Initialise();
+    bux::Initialise();
 
-    Server server;
-    server.InternalServer().if_err([] (AllocError) {
+    bux::Server server;
+    server.InternalServer().if_err([] (bux::AllocError) {
         fmt::print("Failed to start buxtehude server, exiting...\n");
         std::exit(1);
     });
 
-    server.IPServer(1637).if_err([] (ListenError) {
+    server.IPServer(1637).if_err([] (bux::ListenError) {
         fmt::print("Failed to start buxtehude INET server, exiting...\n");
         std::exit(1);
     });
 
-    Client terminal({
+    bux::Client terminal({
         .teamname = "terminal",
     });
 
-    terminal.AddHandler("query-result", [] (Client& cl, const Message& m) {
-        if (!ValidateJSON(m.content, validate::QUERY_RESULT)) return;
+    terminal.AddHandler("query-result", [] (bux::Client& cl, const bux::Message& m) {
+        if (!bux::ValidateJSON(m.content, validate::QUERY_RESULT)) return;
         fmt::print("Query results ({}):\n", m.content["term"].get<std::string>());
 
         for (const json& j : m.content["items"]) {
@@ -59,7 +59,7 @@ int main()
         }
     });
 
-    terminal.InternalConnect(server).if_err([] (ConnectError) {
+    terminal.InternalConnect(server).if_err([] (bux::ConnectError) {
         fmt::print("Failed to start buxtehude terminal client, exiting...\n");
         std::exit(1);
     });

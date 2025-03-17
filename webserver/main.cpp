@@ -13,20 +13,22 @@
 int main()
 {
     using namespace std::chrono_literals;
+    namespace bux = buxtehude;
+
     crow::SimpleApp crow_app;
     crow_app.loglevel(crow::LogLevel::Warning);
 
-    buxtehude::Initialise(
-    [] (buxtehude::LogLevel level, std::string_view message) {
+    bux::Initialise(
+    [] (bux::LogLevel level, std::string_view message) {
         Log(static_cast<LogLevel>(level), "{}", message);
     });
 
-    auto bclient = std::make_unique<buxtehude::Client>(buxtehude::ClientPreferences {
+    auto bclient = std::make_unique<bux::Client>(bux::ClientPreferences {
         .teamname = "webserver",
-        .format = buxtehude::MessageFormat::MSGPACK
+        .format = bux::MessageFormat::MSGPACK
     });
 
-    bclient->IPConnect("localhost", 1637).if_err([] (buxtehude::ConnectError) {
+    bclient->IPConnect("localhost", 1637).if_err([] (bux::ConnectError) {
         Log(LogLevel::SEVERE, "Failed to connect to buxtehude server");
         std::exit(1);
     });

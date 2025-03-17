@@ -62,7 +62,7 @@ static void SendQuery(const std::vector<Result>& results, App* app,
             { "term", query_string },
             { "request-id", request_id }
         }
-    }).if_err([] (buxtehude::WriteError) {
+    }).if_err([] (bux::WriteError) {
         Log(LogLevel::WARNING, "Failed to write back query-result - connection closed");
     });
 
@@ -204,7 +204,7 @@ static Result TC_GetQueriesDB(TaskContext ctx, App* app,
 App::App(std::string_view cfg_path)
 {
     CURLDriver::GlobalInit();
-    buxtehude::Initialise([] (buxtehude::LogLevel l, std::string_view msg) {
+    bux::Initialise([] (bux::LogLevel l, std::string_view msg) {
         Log(static_cast<LogLevel>(l), "(buxtehude) {}", msg);
     });
 
@@ -228,8 +228,8 @@ App::App(std::string_view cfg_path)
 
     database.Connect({mongouri});
 
-    bclient = std::make_unique<buxtehude::Client>(buxtehude::ClientPreferences {
-        .format = buxtehude::MessageFormat::MSGPACK,
+    bclient = std::make_unique<bux::Client>(bux::ClientPreferences {
+        .format = bux::MessageFormat::MSGPACK,
         .teamname = "webscraper"
     });
 
@@ -242,9 +242,9 @@ App::App(std::string_view cfg_path)
 
     Log(LogLevel::INFO, "Established connection to buxtehude server");
 
-    bclient->AddHandler("query", [this] (buxtehude::Client& client,
-                        const buxtehude::Message& msg) {
-        if (!buxtehude::ValidateJSON(msg.content, validate::QUERY)) return;
+    bclient->AddHandler("query", [this] (bux::Client& client,
+                        const bux::Message& msg) {
+        if (!bux::ValidateJSON(msg.content, validate::QUERY)) return;
         int request_id = msg.content["request-id"];
         size_t depth = msg.content["depth"];
         StoreSelection stores = msg.content["stores"];

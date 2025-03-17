@@ -11,6 +11,8 @@
 
 using QueryResultsMap = std::unordered_map<std::string, std::vector<Product>>;
 
+namespace bux = buxtehude;
+
 struct RequestInfo
 {
     std::promise<QueryResultsMap> promise;
@@ -21,7 +23,7 @@ struct RequestInfo
 class QueryHandler
 {
 public:
-    QueryHandler(buxtehude::Client& bclient, std::string_view webscraper);
+    QueryHandler(bux::Client& bclient, std::string_view webscraper);
 
     // Crow currently does not allow asynchronous request handling. For now, the
     // route lambdas block and wait on the future returned by this function.
@@ -29,7 +31,7 @@ public:
 
 private:
     std::unordered_map<int, RequestInfo> pending_queries;
-    buxtehude::Client& bclient;
+    bux::Client& bclient;
     std::string webscraper_name;
 
     std::atomic<int> request_id = 0;

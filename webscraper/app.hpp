@@ -17,6 +17,8 @@
 constexpr std::string_view FITSCH_VERSION = "0.0.1";
 constexpr std::time_t ENTRY_EXPIRY_TIME_SECONDS = 86400 * 2;
 
+namespace bux = buxtehude;
+
 class App
 {
 public:
@@ -31,7 +33,7 @@ public:
     Delegator delegator{16};
     std::unique_ptr<CURLDriver> curl_driver;
     Database database;
-    std::unique_ptr<buxtehude::Client> bclient;
+    std::unique_ptr<bux::Client> bclient;
 
 private:
     std::map<StoreID, const Store*> stores;
