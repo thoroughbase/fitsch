@@ -15,6 +15,8 @@
 #include "common/util.hpp"
 #include "common/validate.hpp"
 
+#include <chrono>
+
 // ResultCallbacks
 
 static void PrintProduct(const std::vector<Result>& results, App* app,
@@ -199,13 +201,37 @@ static Result TC_GetQueriesDB(TaskContext ctx, App* app,
     };
 }
 
+void RetryConnection(bux::Client& client)
+{
+    using namespace std::chrono_literals;
+
+    constexpr static auto BASE_WAIT_TIME = 5s;
+    constexpr static auto MAX_WAIT_TIME = 40s;
+    static auto wait_time = BASE_WAIT_TIME;
+
+    std::thread reconnect_thread([&client] {
+        std::this_thread::sleep_for(wait_time);
+        client.IPConnect("localhost", 1637).if_err([&client] (bux::ConnectError e) {
+            Log(LogLevel::WARNING, "Failed to connect to buxtehude server: {}",
+                e.What());
+            if (wait_time < MAX_WAIT_TIME) wait_time += 5s;
+            RetryConnection(client);
+        }).if_ok([] {
+            wait_time = BASE_WAIT_TIME;
+            Log(LogLevel::INFO, "Reconnected to buxtehude server");
+        });
+    });
+    reconnect_thread.detach();
+}
+
 // App
 
 App::App(std::string_view cfg_path)
 {
     CURLDriver::GlobalInit();
-    bux::Initialise([] (bux::LogLevel l, std::string_view msg) {
-        Log(static_cast<LogLevel>(l), "(buxtehude) {}", msg);
+    bux::Initialise([] (bux::LogLevel level, std::string_view msg) {
+        if (level < bux::LogLevel::SEVERE) return;
+        Log(static_cast<LogLevel>(level), "(buxtehude) {}", msg);
     });
 
     Log(LogLevel::INFO, "Starting Fitsch {}", FITSCH_VERSION);
@@ -226,21 +252,12 @@ App::App(std::string_view cfg_path)
     curl_driver = std::make_unique<CURLDriver>(128, user_agent);
     curl_driver->Run();
 
-    database.Connect({mongouri});
+    database.Connect({ mongouri });
 
     bclient = std::make_unique<bux::Client>(bux::ClientPreferences {
         .format = bux::MessageFormat::MSGPACK,
         .teamname = "webscraper"
     });
-
-    if (auto connect_err = bclient->IPConnect("localhost", 1637);
-        connect_err.is_error()) {
-        Log(LogLevel::WARNING, "Failed to connect to buxtehude server");
-        bclient.reset();
-        return;
-    }
-
-    Log(LogLevel::INFO, "Established connection to buxtehude server");
 
     bclient->AddHandler("query", [this] (bux::Client& client,
                         const bux::Message& msg) {
@@ -258,6 +275,19 @@ App::App(std::string_view cfg_path)
                 })
             );
         }
+    });
+
+    bclient->SetDisconnectHandler([] (bux::Client& client) {
+        Log(LogLevel::WARNING, "Connection dropped to buxtehude server, retrying...");
+        RetryConnection(client);
+    });
+
+    bclient->IPConnect("localhost", 1637).if_err([this] (bux::ConnectError e) {
+        Log(LogLevel::WARNING, "Failed to connect to buxtehude server: {}, retrying...",
+            e.What());
+        RetryConnection(*bclient);
+    }).if_ok([] {
+        Log(LogLevel::INFO, "Established connection to buxtehude server");
     });
 }
 

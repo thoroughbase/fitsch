@@ -10,16 +10,37 @@
 #include <chrono>
 #include <ranges>
 
+namespace bux = buxtehude;
+using namespace std::chrono_literals;
+
+void RetryConnection(bux::Client& client)
+{
+    constexpr static auto BASE_WAIT_TIME = 5s;
+    constexpr static auto MAX_WAIT_TIME = 40s;
+    static auto wait_time = BASE_WAIT_TIME;
+
+    std::thread reconnect_thread([&client] {
+        std::this_thread::sleep_for(wait_time);
+        client.IPConnect("localhost", 1637).if_err([&client] (bux::ConnectError e) {
+            Log(LogLevel::WARNING, "Failed to connect to buxtehude server: {}",
+                e.What());
+            if (wait_time < MAX_WAIT_TIME) wait_time += 5s;
+            RetryConnection(client);
+        }).if_ok([] {
+            wait_time = BASE_WAIT_TIME;
+            Log(LogLevel::INFO, "Reconnected to buxtehude server");
+        });
+    });
+    reconnect_thread.detach();
+}
+
 int main()
 {
-    using namespace std::chrono_literals;
-    namespace bux = buxtehude;
-
     crow::SimpleApp crow_app;
     crow_app.loglevel(crow::LogLevel::Warning);
 
-    bux::Initialise(
-    [] (bux::LogLevel level, std::string_view message) {
+    bux::Initialise([] (bux::LogLevel level, std::string_view message) {
+        if (level < bux::LogLevel::SEVERE) return;
         Log(static_cast<LogLevel>(level), "{}", message);
     });
 
@@ -28,9 +49,15 @@ int main()
         .format = bux::MessageFormat::MSGPACK
     });
 
-    bclient->IPConnect("localhost", 1637).if_err([] (bux::ConnectError) {
-        Log(LogLevel::SEVERE, "Failed to connect to buxtehude server");
-        std::exit(1);
+    bclient->IPConnect("localhost", 1637).if_err([&bclient] (bux::ConnectError e) {
+        Log(LogLevel::WARNING, "Failed to connect to buxtehude server: {}, retrying...",
+            e.What());
+        RetryConnection(*bclient);
+    });
+
+    bclient->SetDisconnectHandler([] (bux::Client& client) {
+        Log(LogLevel::WARNING, "Connection dropped to buxtehude server, retrying...");
+        RetryConnection(client);
     });
 
     QueryHandler query_handler(*bclient.get(), "webscraper");
