@@ -72,13 +72,9 @@ static int CURL_SocketInfoCallback(CURL* easy_handle, int fd, int what, void* ge
     }
 
     if (what & CURL_POLL_REMOVE) {
-        auto iterator = std::find_if(sock_contexts.begin(), sock_contexts.end(),
-            [fd] (auto& unique_ptr) {
-                return unique_ptr->fd == fd;
-            }
-        );
-
-        if (iterator != sock_contexts.end()) sock_contexts.erase(iterator);
+        std::erase_if(sock_contexts, [fd] (auto& unique_ptr) {
+            return unique_ptr->fd == fd;
+        });
 
         curl_multi_assign(g_ctx->multi_handle, fd, nullptr);
     } else if (what & CURL_POLL_INOUT) {
