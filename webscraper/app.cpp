@@ -201,6 +201,44 @@ static Result TC_GetQueriesDB(TaskContext ctx, App* app,
     };
 }
 
+// AppConfig
+
+std::optional<AppConfig> AppConfig::FromJSONFile(std::string_view path)
+{
+    AppConfig result;
+
+    std::ifstream cfg_file { path };
+
+    if (!cfg_file.is_open()) {
+        Log(LogLevel::WARNING, "Failed to open config file '{}'", path);
+        return {};
+    }
+
+    json cfg_json;
+    try {
+        cfg_json = json::parse(cfg_file);
+    } catch (const json::parse_error& e) {
+        Log(LogLevel::WARNING, "Failed to parse config JSON: {}", e.what());
+        return {};
+    }
+
+    if (!cfg_json.contains("/mongodb-uri"_json_pointer)) {
+        Log(LogLevel::WARNING, "No MongoDB URI found in config");
+        return {};
+    } else {
+        cfg_json["mongodb-uri"].get_to(result.mongodb_uri);
+    }
+
+    if (!cfg_json.contains("/curl/user-agent"_json_pointer)) {
+        Log(LogLevel::WARNING, "No CURL user agent found in config");
+        return {};
+    } else {
+        cfg_json["curl"]["user-agent"].get_to(result.curl_useragent);
+    }
+
+    return result;
+}
+
 void RetryConnection(bux::Client& client)
 {
     using namespace std::chrono_literals;
@@ -236,23 +274,16 @@ App::App(std::string_view cfg_path)
 
     Log(LogLevel::INFO, "Starting Fitsch {}", FITSCH_VERSION);
 
-    std::ifstream cfg_file(cfg_path);
-
-    if (!cfg_file.is_open()) {
-        Log(LogLevel::SEVERE, "Failed to open `config.json`. Shutting down");
-        std::exit(1);
+    std::optional<AppConfig> config = AppConfig::FromJSONFile(cfg_path);
+    if (!config) {
+        Log(LogLevel::SEVERE, "Couldn't read config, exiting");
+        std::exit(EXIT_FAILURE);
     }
 
-    json config = json::parse(cfg_file);
-    cfg_file.close();
-
-    std::string mongouri = config["mongodb_uri"];
-    std::string user_agent = config["curl"]["user_agent"];
-
-    curl_driver = std::make_unique<CURLDriver>(128, user_agent);
+    curl_driver = std::make_unique<CURLDriver>(128, config->curl_useragent);
     curl_driver->Run();
 
-    database.Connect({ mongouri });
+    database.Connect({ config->mongodb_uri });
 
     bclient = std::make_unique<bux::Client>(bux::ClientPreferences {
         .format = bux::MessageFormat::MSGPACK,

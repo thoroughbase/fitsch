@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <string_view>
 #include <memory>
@@ -18,6 +19,14 @@ constexpr std::string_view FITSCH_VERSION = "0.0.1";
 constexpr std::time_t ENTRY_EXPIRY_TIME_SECONDS = 86400 * 2;
 
 namespace bux = buxtehude;
+
+struct AppConfig
+{
+    std::string mongodb_uri;
+    std::string curl_useragent;
+
+    static std::optional<AppConfig> FromJSONFile(std::string_view path);
+};
 
 class App
 {
