@@ -24,6 +24,9 @@ struct AppConfig
 {
     std::string mongodb_uri;
     std::string curl_useragent;
+    std::string bux_path_or_hostname = "localhost";
+    bux::ConnectionType bux_conn_type = bux::ConnectionType::INTERNET;
+    uint16_t bux_port = bux::DEFAULT_PORT;
 
     static std::optional<AppConfig> FromJSONFile(std::string_view path);
 };
@@ -42,8 +45,12 @@ public:
     Delegator delegator{16};
     std::unique_ptr<CURLDriver> curl_driver;
     Database database;
-    std::unique_ptr<bux::Client> bclient;
+    bux::Client bclient;
 
 private:
+    void RetryConnection();
+    bux::tb::error<bux::ConnectError> BuxConnect();
+
+    AppConfig config;
     std::map<StoreID, const Store*> stores;
 };
