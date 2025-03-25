@@ -71,8 +71,9 @@ static void SendQuery(const std::vector<Result>& results, App* app,
 
     if (upload) {
         Log(LogLevel::DEBUG, "Uploading query {}", query_string);
-        auto qt = list.AsQueryTemplate(query_string, stores);
-        app->database.PutQueryTemplates(tb::make_span({ qt }));
+        app->database.PutQueryTemplates(tb::make_span({
+            list.AsQueryTemplate(query_string, stores)
+        }));
         if (!list.products.empty()) app->database.PutProducts(products);
     }
 }
@@ -124,7 +125,6 @@ static Result TC_DoQuery_Parse(TaskContext ctx, const Store* store,
 static Result TC_DoQuery(TaskContext ctx, App* app, const std::string& query_string,
     const StoreSelection& stores, size_t depth)
 {
-    // Figure out what pages need to be fetched first
     for (StoreID id : stores) {
         const Store* store = app->GetStore(id);
         if (store == nullptr) {
@@ -151,46 +151,40 @@ static Result TC_DoQuery(TaskContext ctx, App* app, const std::string& query_str
 static Result TC_GetQueriesDB(TaskContext ctx, App* app,
     const std::string& query_string, const StoreSelection& stores, size_t depth)
 {
-    // Get query template stored in database
     ProductList list(depth);
-    auto qt = app->database.GetQueryTemplates(tb::make_span({ query_string }));
+    auto templates = app->database.GetQueryTemplates(tb::make_span({ query_string }));
 
     StoreSelection missing;
-    // Check if query is "complete" i.e. has the information we're looking for
-    if (qt.empty()) {
-        // If no query found, perform queries on all stores
+
+    if (templates.empty()) {
         missing = stores;
     } else {
-        // If query found, check to see if all stores contained & deep enough
-        const QueryTemplate& q = qt[0];
+        const QueryTemplate& query_info = templates[0];
         std::time_t now = std::time(nullptr);
-        if (q.depth < depth || now - q.timestamp > ENTRY_EXPIRY_TIME_SECONDS) {
-            // Query not deep enough or expired, redo all stores
+        if (query_info.depth < depth
+            || now - query_info.timestamp > ENTRY_EXPIRY_TIME_SECONDS) {
             missing = stores;
         } else {
-            // Are all the stores that we asked for there?
-            if (!std::ranges::includes(q.stores, stores)) {
+            if (!std::ranges::includes(query_info.stores, stores)) {
                 missing = stores;
-                // Just redo the missing ones
-                for (StoreID id : q.stores) std::erase(missing, id);
+                for (StoreID id : query_info.stores) std::erase(missing, id);
             }
 
-            // Retrieve products from database as well
             auto relevant_ids = std::views::keys(
-                q.results | std::views::filter([depth] (auto& pair) {
+                query_info.results | std::views::filter([depth] (auto& pair) {
                     auto& [id, info] = pair;
                     return info.relevance < depth;
                 })
             ) | tb::range_to<std::vector<std::string>>();
             auto products = app->database.GetProducts(relevant_ids);
 
-            for (auto& p : products)
-                list.products.emplace_back(std::move(p), q.results.at(p.id));
+            for (Product& product : products)
+                list.products.emplace_back(std::move(product),
+                    query_info.results.at(product.id));
         }
     }
 
     if (missing.size()) {
-        // Queue tasks to retrieve missing info
         ctx.delegator.QueueExtraTasks(ctx.group_id, tb::make_span({
             Task { TC_DoQuery, app, query_string, missing, depth }
         }));
