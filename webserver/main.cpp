@@ -80,8 +80,8 @@ int main()
 
         std::string_view unescaped_term(curl_str, unescaped_len);
 
-        auto future = query_handler.SendQuery(unescaped_term);
-        auto status = future.wait_for(5s);
+        std::future<QueryResultsMap> future = query_handler.SendQuery(unescaped_term);
+        std::future_status status = future.wait_for(5s);
 
         if (status == std::future_status::timeout) {
             return crow::response("Timeout occurred");
@@ -92,7 +92,7 @@ int main()
 
         std::ranges::sort(products,
             [] (auto& a, auto& b) {
-                auto cmp = a.price_per_unit <=> b.price_per_unit;
+                std::partial_ordering cmp = a.price_per_unit <=> b.price_per_unit;
                 if (cmp == std::partial_ordering::unordered)
                     return a.item_price < b.item_price;
                 return a.price_per_unit < b.price_per_unit;
@@ -118,7 +118,7 @@ int main()
         }};
 
         curl_easy_cleanup(curl_str);
-        auto page = crow::mustache::load("results.html");
+        crow::mustache::template_t page = crow::mustache::load("results.html");
         return crow::response(page.render(ctx));
     });
 

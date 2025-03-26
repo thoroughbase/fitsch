@@ -82,7 +82,7 @@ void Delegator::ProcessResult(unsigned group_id, Result&& result)
     std::lock_guard<std::mutex> results_guard(results_mutex);
 
     auto& [id, container] = *(results.find(group_id));
-    auto& result_vec = container.results;
+    std::vector<Result>& result_vec = container.results;
 
     result_vec.emplace_back(std::move(result));
 

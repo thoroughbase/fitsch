@@ -9,7 +9,7 @@
 
 static void Libevent_TimerCallback(int fd, short what, void* general_ctx)
 {
-    GeneralCURLContext* ctx = static_cast<GeneralCURLContext*>(general_ctx);
+    auto* ctx = static_cast<GeneralCURLContext*>(general_ctx);
 
     ctx->return_code = curl_multi_socket_action(ctx->multi_handle, CURL_SOCKET_TIMEOUT,
         0, &ctx->running_handles);
@@ -18,7 +18,7 @@ static void Libevent_TimerCallback(int fd, short what, void* general_ctx)
 
 static void Libevent_ReadWriteCallback(int fd, short what, void* general_ctx)
 {
-    GeneralCURLContext* ctx = static_cast<GeneralCURLContext*>(general_ctx);
+    auto* ctx = static_cast<GeneralCURLContext*>(general_ctx);
 
     int curl_what = 0;
     if (what & EV_READ) curl_what |= CURL_CSELECT_IN;
@@ -31,7 +31,7 @@ static void Libevent_ReadWriteCallback(int fd, short what, void* general_ctx)
 
 static void Libevent_InterruptCallback(int fd, short what, void* general_ctx)
 {
-    GeneralCURLContext* ctx = static_cast<GeneralCURLContext*>(general_ctx);
+    auto* ctx = static_cast<GeneralCURLContext*>(general_ctx);
 
     ctx->interrupt = true;
     event_base_loopbreak(ctx->ebase);
@@ -39,7 +39,7 @@ static void Libevent_InterruptCallback(int fd, short what, void* general_ctx)
 
 static void Libevent_AddTransferCallback(int fd, short what, void* handle_pair)
 {
-    auto ctx = static_cast<std::pair<CURL*, EasyHandleInfo>*>(handle_pair);
+    auto* ctx = static_cast<std::pair<CURL*, EasyHandleInfo>*>(handle_pair);
     auto& [easy_handle_to_add, handle_info] = *ctx;
 
     curl_multi_add_handle(handle_info.multi_handle, easy_handle_to_add);
@@ -59,8 +59,8 @@ static size_t CURL_WriteData(char* data, size_t size, size_t nmemb, std::string*
 static int CURL_SocketInfoCallback(CURL* easy_handle, int fd, int what, void* general_ctx,
     void* socket_ctx)
 {
-    GeneralCURLContext* g_ctx = static_cast<GeneralCURLContext*>(general_ctx);
-    SocketCURLContext* s_ctx = static_cast<SocketCURLContext*>(socket_ctx);
+    auto* g_ctx = static_cast<GeneralCURLContext*>(general_ctx);
+    auto* s_ctx = static_cast<SocketCURLContext*>(socket_ctx);
 
     auto& sock_contexts = g_ctx->socket_contexts;
     if (!s_ctx) {
@@ -95,7 +95,7 @@ static int CURL_SocketInfoCallback(CURL* easy_handle, int fd, int what, void* ge
 
 static int CURL_TimerInfoCallback(CURLM* multi_handle, long timeout, void* general_ctx)
 {
-    GeneralCURLContext* ctx = static_cast<GeneralCURLContext*>(general_ctx);
+    auto* ctx = static_cast<GeneralCURLContext*>(general_ctx);
 
     if (ctx->timer_event) {
         event_free(ctx->timer_event);

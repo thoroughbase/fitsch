@@ -50,8 +50,8 @@ bool Database::Ping()
 {
     try {
         json ping = { { "ping", 1 } };
-        auto client = pool->acquire();
-        auto admindb = (*client)["admin"];
+        mongocxx::pool::entry client = pool->acquire();
+        mongocxx::database admindb = (*client)["admin"];
         admindb.run_command(bsoncxx::from_json(ping.dump()));
     } catch (const std::exception& e) {
         Log(LogLevel::SEVERE, "Failed to ping database: {}", e.what());

@@ -59,10 +59,7 @@ int main()
         }
     });
 
-    terminal.InternalConnect(server).if_err([] (bux::ConnectError) {
-        fmt::print("Failed to start buxtehude terminal client, exiting...\n");
-        std::exit(1);
-    });
+    terminal.InternalConnect(server).ignore_error();
 
     std::string input;
 
@@ -76,7 +73,7 @@ int main()
             StoreID::SUPERVALU, StoreID::DUNNES_STORES, StoreID::TESCO, StoreID::ALDI
         });
 
-        [[maybe_unused]] auto _ = terminal.Write({
+        terminal.Write({
             .type = "query", .dest = "webscraper", .only_first = true,
             .content = {
                 { "terms", terms },
@@ -84,7 +81,7 @@ int main()
                 { "stores", std::move(stores) },
                 { "depth", 10 }
             }
-        });
+        }).ignore_error();
     }
 
     return 0;

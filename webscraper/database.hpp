@@ -33,9 +33,9 @@ public:
             return {};
         }
 
-        auto client = pool->acquire();
+        mongocxx::pool::entry client = pool->acquire();
         mongocxx::database db = (*client)["fitsch"];
-        auto collection = db.collection(collection_name);
+        mongocxx::collection collection = db.collection(collection_name);
 
         json search_term = {
             { field, {{ "$in", terms }} }
@@ -44,9 +44,10 @@ public:
         std::vector<T> matches;
         matches.reserve(terms.size());
         try {
-            auto results = collection.find(bsoncxx::from_json(search_term.dump()));
+            mongocxx::cursor results
+                = collection.find(bsoncxx::from_json(search_term.dump()));
 
-            for (auto& r : results) {
+            for (const bsoncxx::document::view& r : results) {
                 json j = json::parse(bsoncxx::to_json(r));
                 matches.emplace_back(j.get<T>());
             }
@@ -69,9 +70,9 @@ public:
 
         if (items.empty()) return;
 
-        auto client = pool->acquire();
+        mongocxx::pool::entry client = pool->acquire();
         mongocxx::database db = (*client)["fitsch"];
-        auto collection = db.collection(collection_name);
+        mongocxx::collection collection = db.collection(collection_name);
 
         auto removals =
             items | std::views::transform([field] (const json& item) {

@@ -48,7 +48,7 @@ static void SendQuery(const std::vector<Result>& results, App* app,
     ProductList list;
     bool upload = false;
 
-    for (auto& result : results) {
+    for (const Result& result : results) {
         if (result.Type() != ResultType::GENERIC_VALID) continue;
         auto& [queried_website, product_list]
             = result.Get<std::pair<bool, ProductList>>();
@@ -94,7 +94,7 @@ static Result TC_GetProduct_Parse(TaskContext ctx, const Store* store,
 static Result TC_GetProduct_Fetch(TaskContext ctx, App* app, const std::string& url,
     const Store* store)
 {
-    auto handle = ctx.delegator.QueueExtraExternalTask(ctx.group_id);
+    ExternalTaskHandle handle = ctx.delegator.QueueExtraExternalTask(ctx.group_id);
     app->curl_driver->PerformTransfer(url, [handle, ctx, store] (auto data, auto url,
         CURLcode code) {
         if (code == CURLE_OK) {
@@ -134,7 +134,7 @@ static Result TC_DoQuery(TaskContext ctx, App* app, const std::string& query_str
         std::string url = store->GetProductSearchURL(query_string);
         CURLOptions request_options = store->GetProductSearchCURLOptions(query_string);
 
-        auto handle = ctx.delegator.QueueExtraExternalTask(ctx.group_id);
+        ExternalTaskHandle handle = ctx.delegator.QueueExtraExternalTask(ctx.group_id);
 
         app->curl_driver->PerformTransfer(url,
         [handle, ctx, store, depth] (auto data, auto url, CURLcode code) {

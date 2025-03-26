@@ -25,7 +25,7 @@ QueryHandler::QueryHandler(bux::Client& bclient, std::string_view webscraper)
         auto iterator = pending_queries.find(id);
         if (iterator == pending_queries.end()) return;
 
-        auto& request_info = iterator->second;
+        RequestInfo& request_info = iterator->second;
         request_info.results[term].reserve(msg.content["items"].size());
 
         for (const json& j : msg.content["items"]) {
