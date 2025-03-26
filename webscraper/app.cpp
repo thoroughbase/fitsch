@@ -374,5 +374,5 @@ bux::tb::error<bux::ConnectError> App::BuxConnect()
         break;
     }
 
-    return bux::tb::ok_t {};
+    return bux::tb::ok;
 }

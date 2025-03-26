@@ -88,8 +88,8 @@ constexpr Store DunnesStores = {
 
 constexpr Store Aldi = {
     .id = StoreID::ALDI, .name = "Aldi", .prefix = "AL",
-    .homepage = "https://groceries.aldi.ie",
-    .root_url = "https://groceries.aldi.ie",
+    .homepage = "https://aldi.ie",
+    .root_url = "https://aldi.ie",
     .region = Region::IE,
     .GetProductSearchURL = AL_GetProductSearchURL,
     .GetProductAtURL = AL_GetProductAtURL,

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <ctime>
+#include <cctype>
 #include <ranges>
 
 // Constants
@@ -27,9 +28,12 @@ const std::unordered_map<std::string_view, std::pair<Unit, float>>
   UNIT_CONVERSIONS = {
     { "kg",         { Unit::Kilogrammes, 1 } },
     { "kg drained", { Unit::Kilogrammes, 1 } },   // FIXME: Treated the same for now
+    { "kne",        { Unit::Kilogrammes, 1 } },
     { "g",          { Unit::Kilogrammes, 1000 } },
     { "100g",       { Unit::Kilogrammes, 10 } },
     { "75cl",       { Unit::Litres, 1 / 0.75f } },
+    { "cl",         { Unit::Litres, 1 / 0.75f } }, // ALDI 'CL' is always 75CL
+    { "750ml",      { Unit::Litres, 1 / 0.75f } },
     { "70cl",       { Unit::Litres, 1 / 0.7f } },
     { "l",          { Unit::Litres, 1 } },
     { "litre",      { Unit::Litres, 1 } },
@@ -37,8 +41,11 @@ const std::unordered_map<std::string_view, std::pair<Unit, float>>
     { "100ml",      { Unit::Litres, 10 } },
     { "m²",         { Unit::SqMetres, 1 } },
     { "each",       { Unit::Piece, 1 } },
+    { "ea",         { Unit::Piece, 1 } },
     { "100sht",     { Unit::Piece, 0.01f } },
     { "100 sheets", { Unit::Piece, 0.01f } },
+    { "sht",        { Unit::Piece, 0.01f } }, // ALDI 'sht' is always 100 sheets
+    { "20 bag",     { Unit::Piece, 0.05f } },
     { "metre",      { Unit::Metres, 1 } },
     { "m",          { Unit::Metres, 1 } }
 };
@@ -143,15 +150,19 @@ PricePU PricePU::FromString(std::string_view str)
 
     std::string_view unit_view = str;
     unit_view.remove_prefix(separator_index + 1);
+    std::string lowercase_unit { unit_view };
+    for (char& c : lowercase_unit) {
+        c = tolower(c);
+    }
     std::string_view price_view(str.data(), separator_index);
 
-    if (!UNIT_CONVERSIONS.contains(unit_view)) {
+    if (!UNIT_CONVERSIONS.contains(lowercase_unit)) {
         Log(LogLevel::WARNING, "Unrecognised unit for '{}'!", str);
         Log(LogLevel::WARNING, "Offending unit: {}", unit_view);
         return {};
     }
 
-    auto [unit_type, factor] = UNIT_CONVERSIONS.at(unit_view);
+    auto [unit_type, factor] = UNIT_CONVERSIONS.at(lowercase_unit);
     return { Price::FromString(std::string { price_view }) * factor, unit_type };
 }
 

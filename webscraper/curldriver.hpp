@@ -32,9 +32,7 @@ inline const CURLHeaders CURLHEADERS_DEFAULT {};
 
 inline const CURLHeaders CURLHEADERS_ALDI {
     tb::make_span<std::string_view>({
-        "Accept: application/json",
-        "Content-Type: application/json; charset=UTF-8",
-        "x-requested-with: XMLHttpRequest"
+        "Accept: application/json, text/plain"
     })
 };
 

@@ -57,11 +57,8 @@ std::string SVLike_GetProductSearchURL(const Store& store, std::string_view quer
         return {};
     }
 
-    std::string url = fmt::format("{}/results?q={}&skip=0", store.homepage, buffer);
-
-    curl_free(buffer);
-
-    return url;
+    tb::scoped_guard free_buffer = [buffer] { curl_free(buffer); };
+    return fmt::format("{}/results?q={}&skip=0", store.homepage, buffer);
 }
 
 ProductList SVLike_ParseProductSearch(const Store& store, std::string_view data,
@@ -235,10 +232,8 @@ std::string TE_GetProductSearchURL(std::string_view query)
         return {};
     }
 
-    std::string url = fmt::format("{}/search?query={}", stores::Tesco.homepage, buffer);
-    free(buffer);
-
-    return url;
+    tb::scoped_guard free_buffer = [buffer] { curl_free(buffer); };
+    return fmt::format("{}/search?query={}", stores::Tesco.homepage, buffer);
 }
 
 std::optional<Product> TE_GetProductAtURL(const HTML& html)
@@ -317,34 +312,58 @@ ProductList AL_ParseProductSearch(std::string_view data, size_t depth)
         return {};
     }
 
-    json& items = json_obj["Suggestions"];
+    constexpr std::string_view BASE_IMAGE_URL
+        = "https://dm.emea.cms.aldi.cx/is/image/aldiprodeu/"
+          "product/jpg/scaleWidth/1296";
+    constexpr std::string_view FALLBACK_IMAGE_URL
+        = "https://dm.emea.cms.aldi.cx/is/content/aldiprodeu/"
+          "GB%20Fallback%20Image%203-no%20text";
+
+    json& items = json_obj["data"];
     ProductList results;
     for (json& item : items) {
-        unsigned int price = item["ListPrice"].get<float>() * 100;
-
         Product product {
-            .store = stores::Aldi.id, .name = item["FullDisplayName"],
+            .store = stores::Aldi.id,
+            .name = fmt::format("{} {}", item["brandName"].get<std::string>(),
+                                item["name"].get<std::string>()),
             .description = {},
             .id = fmt::format("{}{}", stores::Aldi.prefix,
-                item["ProductId"].get<std::string>()),
-            .image_url = item["ImageUrl"],
-            .item_price = Price { Currency::EUR, price },
+                item["sku"].get<std::string>()),
+            .item_price = Price {
+                Currency::EUR, item["price"]["amount"].get<unsigned>()
+            },
             .timestamp = std::time(nullptr),
-            .url = fmt::format("{}/{}", stores::Aldi.root_url,
-                item["Url"].get<std::string>())
+            .url = fmt::format("{}/product/{}", stores::Aldi.root_url,
+                item["sku"].get<std::string>())
         };
 
-        bool has_ppu = item["HasUnitPrice"];
-        if (has_ppu) {
-            product.price_per_unit = PricePU::FromString(
-                fmt::format("{} {}", item["UnitPrice"].get<std::string>(),
-                    item["UnitPriceDeclaration"].get<std::string>())
-            );
+        if (!item["assets"].empty()) {
+            const std::string unescaped_image_url = item["assets"][0]["url"];
+
+            std::string_view product_image_id = unescaped_image_url;
+            constexpr size_t suffix_size = std::string_view("\\/{slug}").size();
+            product_image_id.remove_suffix(suffix_size - 1);
+            size_t image_id_start = product_image_id.rfind('/');
+            product_image_id.remove_prefix(image_id_start + 1);
+
+            product.image_url = fmt::format("{}/{}", BASE_IMAGE_URL, product_image_id);
         } else {
-            product.price_per_unit = {
-                .price = product.item_price,
-                .unit = Unit::Piece
+            product.image_url = FALLBACK_IMAGE_URL;
+        }
+
+        // Parsing this string as a PricePU will yield the correct unit, but
+        // not the price. The actual price per unit is in /price/comparison
+
+        if (item["sellingSize"].is_string()) {
+            product.price_per_unit
+                = PricePU::FromString(item["sellingSize"].get<std::string>());
+            product.price_per_unit.price = {
+                Currency::EUR,
+                item["price"]["comparison"].get<unsigned>()
             };
+        } else {
+            product.price_per_unit.unit = Unit::Piece;
+            product.price_per_unit.price = product.item_price;
         }
 
         results.products.emplace_back(std::move(product),
@@ -358,8 +377,18 @@ ProductList AL_ParseProductSearch(std::string_view data, size_t depth)
 
 std::string AL_GetProductSearchURL(std::string_view query)
 {
-    return fmt::format("{}/api/aldisearch/autocomplete?limit=25",
-        stores::Aldi.root_url);
+    char* buffer = curl_easy_escape(nullptr, query.data(), query.size());
+    if (!buffer) {
+        Log(LogLevel::WARNING, "Failed to escape query string {}", query);
+        return {};
+    }
+
+    tb::scoped_guard free_buffer = [buffer] { curl_free(buffer); };
+
+    return fmt::format(
+        "https://api.aldi.ie/v3/product-search?&q={}&limit=30&sort=relevance",
+        buffer
+    );
 }
 
 std::optional<Product> AL_GetProductAtURL(const HTML& html)
@@ -371,10 +400,7 @@ std::optional<Product> AL_GetProductAtURL(const HTML& html)
 CURLOptions AL_GetProductSearchCURLOptions(std::string_view query)
 {
     return {
-        .post_content = json {
-            { "Query", query }
-        }.dump(),
-        .method = CURLOptions::Method::POST,
+        .method = CURLOptions::Method::GET,
         .headers = &CURLHEADERS_ALDI
     };
 }

@@ -56,4 +56,12 @@ constexpr bool is_sorted(const Container& container, Callable&& predicate)
     return true;
 }
 
+template<typename Lambda>
+struct scoped_guard
+{
+    Lambda lambda;
+    scoped_guard(Lambda&& lambda) : lambda(lambda) {}
+    ~scoped_guard() { lambda(); }
+};
+
 }
