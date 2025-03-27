@@ -42,8 +42,8 @@ public:
 
     void GetProductAtURL(StoreID store, std::string_view item_url);
 
-    Delegator delegator{16};
-    std::unique_ptr<CURLDriver> curl_driver;
+    Delegator delegator {16};
+    CURLDriver curl_driver;
     Database database;
     bux::Client bclient;
 

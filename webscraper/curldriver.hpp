@@ -66,18 +66,8 @@ struct TransferRequest
     : url(url), callback(std::move(cb)), options(options) {}
 };
 
-struct SocketCURLContext
-{
-    event* read_write_event = nullptr;
-    int fd;
-
-    ~SocketCURLContext();
-};
-
 struct GeneralCURLContext
 {
-    std::vector<std::unique_ptr<SocketCURLContext>> socket_contexts;
-
     CURLM* multi_handle = nullptr;
     event_base* ebase = nullptr;
     event* timer_event = nullptr;
@@ -90,11 +80,9 @@ struct GeneralCURLContext
 class CURLDriver
 {
 public:
-    CURLDriver(int pool_size, std::string_view user_agent);
+    CURLDriver() = default;
+    void Init(unsigned pool_size, std::string_view user_agent);
     ~CURLDriver();
-
-    // Creates a new thread for libevent & curl feedback loops
-    void Run();
 
     void PerformTransfer(std::string_view url, TransferDoneCallback&& callback,
         const CURLOptions& options = {});
@@ -114,6 +102,4 @@ private:
     std::thread thread;
 
     GeneralCURLContext general_context;
-
-    std::atomic<bool> running = false;
 };

@@ -57,37 +57,27 @@ static size_t CURL_WriteData(char* data, size_t size, size_t nmemb, std::string*
 }
 
 static int CURL_SocketInfoCallback(CURL* easy_handle, int fd, int what, void* general_ctx,
-    void* socket_ctx)
+    void* event_ptr)
 {
     auto* g_ctx = static_cast<GeneralCURLContext*>(general_ctx);
-    auto* s_ctx = static_cast<SocketCURLContext*>(socket_ctx);
-
-    auto& sock_contexts = g_ctx->socket_contexts;
-    if (!s_ctx) {
-        auto& ref = sock_contexts.emplace_back(std::make_unique<SocketCURLContext>());
-
-        s_ctx = ref.get();
-        s_ctx->fd = fd;
-        curl_multi_assign(g_ctx->multi_handle, fd, s_ctx);
-    }
+    auto* socket_read_write_event = static_cast<event*>(event_ptr);
 
     if (what & CURL_POLL_REMOVE) {
-        std::erase_if(sock_contexts, [fd] (auto& unique_ptr) {
-            return unique_ptr->fd == fd;
-        });
+        event_free(socket_read_write_event);
 
         curl_multi_assign(g_ctx->multi_handle, fd, nullptr);
     } else if (what & CURL_POLL_INOUT) {
-        if (s_ctx->read_write_event) event_free(s_ctx->read_write_event);
+        if (socket_read_write_event) event_free(socket_read_write_event);
 
         int ev_flags = EV_PERSIST;
         if (what & CURL_POLL_IN) ev_flags |= EV_READ;
         if (what & CURL_POLL_OUT) ev_flags |= EV_WRITE;
 
-        s_ctx->read_write_event = event_new(g_ctx->ebase, fd, ev_flags,
+        socket_read_write_event = event_new(g_ctx->ebase, fd, ev_flags,
             Libevent_ReadWriteCallback, g_ctx);
 
-        event_add(s_ctx->read_write_event, nullptr);
+        event_add(socket_read_write_event, nullptr);
+        curl_multi_assign(g_ctx->multi_handle, fd, socket_read_write_event);
     }
 
     return 0;
@@ -114,13 +104,6 @@ static int CURL_TimerInfoCallback(CURLM* multi_handle, long timeout, void* gener
     return 0;
 }
 
-// Struct functions
-
-SocketCURLContext::~SocketCURLContext()
-{
-    if (read_write_event) event_free(read_write_event);
-}
-
 CURLHeaders::~CURLHeaders()
 {
     if (header_list) curl_slist_free_all(header_list);
@@ -141,7 +124,7 @@ CURLHeaders::CURLHeaders(std::span<std::string_view> headers)
 
 // CURLDriver
 
-CURLDriver::CURLDriver(int pool_size, std::string_view user_agent)
+void CURLDriver::Init(unsigned pool_size, std::string_view user_agent)
 {
     general_context.ebase = event_base_new();
     general_context.multi_handle = curl_multi_init();
@@ -153,7 +136,7 @@ CURLDriver::CURLDriver(int pool_size, std::string_view user_agent)
     curl_multi_setopt(multi_handle, CURLMOPT_SOCKETDATA, &general_context);
     curl_multi_setopt(multi_handle, CURLMOPT_TIMERDATA, &general_context);
 
-    for (int i = 0; i < pool_size; ++i) {
+    for (unsigned i = 0; i < pool_size; ++i) {
         easy_handles.emplace(curl_easy_init(), EasyHandleInfo {
             .multi_handle = multi_handle
         });
@@ -168,12 +151,12 @@ CURLDriver::CURLDriver(int pool_size, std::string_view user_agent)
         curl_easy_setopt(easy_handle, CURLOPT_WRITEDATA, &info.buffer);
         curl_easy_setopt(easy_handle, CURLOPT_USERAGENT, user_agent.data());
     }
+
+    thread = std::thread(&CURLDriver::Drive, this);
 }
 
 CURLDriver::~CURLDriver()
 {
-    running = false;
-
     event* interrupt_event = event_new(general_context.ebase, -1, 0,
         Libevent_InterruptCallback, &general_context);
     event_active(interrupt_event, 0, 0);
@@ -192,15 +175,6 @@ CURLDriver::~CURLDriver()
 
     curl_multi_cleanup(general_context.multi_handle);
     event_base_free(general_context.ebase);
-}
-
-void CURLDriver::Run()
-{
-    if (running) return;
-    running = true;
-
-    std::thread thr(&CURLDriver::Drive, this);
-    thread = std::move(thr);
 }
 
 void CURLDriver::PerformTransfer(std::string_view url, TransferDoneCallback&& cb,
@@ -292,8 +266,6 @@ void CURLDriver::Drive()
 
             event_free(general_context.timer_event);
             general_context.timer_event = nullptr;
-
-            general_context.socket_contexts.clear();
 
             for (auto& [handle, info] : easy_handles) {
                 if (info.available) continue;

@@ -95,7 +95,7 @@ static Result TC_GetProduct_Fetch(TaskContext ctx, App* app, const std::string& 
     const Store* store)
 {
     ExternalTaskHandle handle = ctx.delegator.QueueExtraExternalTask(ctx.group_id);
-    app->curl_driver->PerformTransfer(url, [handle, ctx, store] (auto data, auto url,
+    app->curl_driver.PerformTransfer(url, [handle, ctx, store] (auto data, auto url,
         CURLcode code) {
         if (code == CURLE_OK) {
             ctx.delegator.QueueExtraTasks(ctx.group_id, tb::make_span({
@@ -136,7 +136,7 @@ static Result TC_DoQuery(TaskContext ctx, App* app, const std::string& query_str
 
         ExternalTaskHandle handle = ctx.delegator.QueueExtraExternalTask(ctx.group_id);
 
-        app->curl_driver->PerformTransfer(url,
+        app->curl_driver.PerformTransfer(url,
         [handle, ctx, store, depth] (auto data, auto url, CURLcode code) {
             ctx.delegator.QueueExtraTasks(ctx.group_id, tb::make_span({
                 Task { TC_DoQuery_Parse, store, std::string { data }, depth }
@@ -293,8 +293,7 @@ App::App(std::string_view cfg_path)
 
     config = std::move(*maybe_config);
 
-    curl_driver = std::make_unique<CURLDriver>(128, config.curl_useragent);
-    curl_driver->Run();
+    curl_driver.Init(32, config.curl_useragent);
 
     database.Connect({ config.mongodb_uri });
 
