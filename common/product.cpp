@@ -42,6 +42,7 @@ const std::unordered_map<std::string_view, std::pair<Unit, float>>
     { "m²",         { Unit::SqMetres, 1 } },
     { "each",       { Unit::Piece, 1 } },
     { "ea",         { Unit::Piece, 1 } },
+    { "pac",        { Unit::Piece, 1 } },
     { "100sht",     { Unit::Piece, 0.01f } },
     { "100 sheets", { Unit::Piece, 0.01f } },
     { "sht",        { Unit::Piece, 0.01f } }, // ALDI 'sht' is always 100 sheets
