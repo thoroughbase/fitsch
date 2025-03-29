@@ -8,13 +8,13 @@
 
 // Constants
 
-constexpr std::string_view UNIT_SUFFIXES[] = {
+constexpr auto UNIT_SUFFIXES = std::to_array<std::string_view>({
     "", " each", "/kg", "/l", "/m²", "m"
-};
+});
 
-constexpr std::array<std::string_view, 3> PRICE_UNIT_SEPARATORS = {
+constexpr auto PRICE_UNIT_SEPARATORS = std::to_array<std::string_view>({
     " per ", "/", " "
-};
+});
 
 static_assert(tb::is_sorted(PRICE_UNIT_SEPARATORS, [] (auto& a, auto& b) {
     return a.size() >= b.size();

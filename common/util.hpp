@@ -15,9 +15,9 @@ constexpr auto MIN_LOG_LEVEL = LogLevel::DEBUG;
 template <typename... T>
 void Log(LogLevel l, fmt::format_string<T...> format, T&&... args)
 {
-    constexpr static std::string_view LEVEL_NAMES[] = {
+    constexpr static auto LEVEL_NAMES = std::to_array<std::string_view>({
         "DEBUG", "INFO", "WARNING", "SEVERE"
-    };
+    });
 
     if (l < MIN_LOG_LEVEL) return;
 
