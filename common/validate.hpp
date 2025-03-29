@@ -9,14 +9,14 @@ namespace validate
 
 using nlohmann::json;
 
-inline const auto IsNumberArray = [] (const json& j) -> bool {
+constexpr auto IsNumberArray = [] (const json& j) -> bool {
     if (!j.is_array()) return false;
     for (auto& element : j)
         if (!element.is_number()) return false;
     return true;
 };
 
-inline const auto IsStringArray = [] (const json& j) -> bool {
+constexpr auto IsStringArray = [] (const json& j) -> bool {
     if (!j.is_array()) return false;
     for (auto& element : j)
         if (!element.is_string()) return false;
