@@ -70,22 +70,19 @@ std::string Price::ToString() const
 
 Price Price::FromString(std::string str)
 {
-    Price price;
-    size_t comma;
-    if ((comma = str.find(',')) != std::string::npos)
+    if (size_t comma = str.find(','); comma != std::string::npos)
         str.erase(comma, 1);
 
-    std::string_view view(str);
-
-    for (auto& [cur, symbol] : CURRENCY_SYMBOLS) {
-        if (view.find(symbol) != 0) continue;
-        else { // Assume symbol can only occur before numerical values
-            price.currency = cur;
-            view.remove_prefix(symbol.size());
+    Price price;
+    for (auto& [currency, symbol] : CURRENCY_SYMBOLS) {
+        if (size_t currency_pos = str.find(symbol); currency_pos != std::string::npos) {
+            price.currency = currency;
+            str.erase(currency_pos, symbol.size());
             break;
         }
     }
 
+    std::string_view view(str);
     size_t ss_point = view.find('.');
 
     try {
