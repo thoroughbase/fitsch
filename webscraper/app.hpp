@@ -52,5 +52,5 @@ private:
     bux::tb::error<bux::ConnectError> BuxConnect();
 
     AppConfig config;
-    std::map<StoreID, const Store*> stores;
+    std::unordered_map<StoreID, const Store*> stores;
 };
