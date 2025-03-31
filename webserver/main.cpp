@@ -34,6 +34,17 @@ void RetryConnection(bux::Client& client)
     reconnect_thread.detach();
 }
 
+std::string_view GetStoreLogo(StoreID store_id)
+{
+    switch (store_id) {
+    case StoreID::SUPERVALU:     return "/static/images/logos/supervalu.png";
+    case StoreID::LIDL:          return "/static/images/logos/lidl.png";
+    case StoreID::TESCO:         return "/static/images/logos/tesco.png";
+    case StoreID::ALDI:          return "/static/images/logos/aldi.png";
+    case StoreID::DUNNES_STORES: return "/static/images/logos/dunnes.png";
+    }
+}
+
 int main()
 {
     crow::SimpleApp crow_app;
@@ -107,7 +118,9 @@ int main()
                 { "name", crow::json::wvalue(std::move(p.name)) },
                 { "img", crow::json::wvalue(std::move(p.image_url)) },
                 { "price", crow::json::wvalue(p.item_price.ToString()) },
-                { "ppu", crow::json::wvalue(p.price_per_unit.ToString()) }
+                { "ppu", crow::json::wvalue(p.price_per_unit.ToString()) },
+                { "url", crow::json::wvalue(std::move(p.url)) },
+                { "logo_url", crow::json::wvalue(GetStoreLogo(p.store).data()) }
             });
         }
 
