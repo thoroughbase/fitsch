@@ -71,7 +71,14 @@ ProductList SVLike_ParseProductSearch(const Store& store, std::string_view data,
 
     Collection<Element> item_listings, name_c, price_c, price_per_c, image_c, url_c;
 
-    HTML html(data);
+    std::optional<HTML> html_opt = HTML::FromString(data);
+    if (!html_opt) {
+        Log(LogLevel::WARNING, "Failed to parse HTML!");
+        return {};
+    }
+
+    HTML& html = html_opt.value();
+
     html.SearchClass(item_listings, "ColListing", Element::BODY, true);
 
     for (Element e : item_listings) {
@@ -170,7 +177,13 @@ std::optional<Product> DS_GetProductAtURL(const HTML& html)
 
 ProductList TE_ParseProductSearch(std::string_view data, size_t depth)
 {
-    HTML html(data);
+    std::optional<HTML> html_opt = HTML::FromString(data);
+    if (!html_opt) {
+        Log(LogLevel::WARNING, "Failed to parse HTML!");
+        return {};
+    }
+
+    HTML& html = html_opt.value();
     Collection<Element> item_listings = html.SearchClass("product-list--list-item",
         Element::BODY, true);
 

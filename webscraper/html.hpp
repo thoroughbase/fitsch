@@ -77,7 +77,6 @@ class Collection
 public:
     struct Iterator
     {
-        Iterator() {}
         Iterator(const Collection* c, size_t i) : col(c), index(i) {}
 
         T operator*() const { return T::collection_access(col->Data(), index); }
@@ -92,10 +91,10 @@ public:
 
     Collection(lxb_dom_collection_t* collection) : ptr(collection) {}
 
-    Collection(lxb_dom_document_t* dom, size_t capacity)
+    Collection(lxb_html_document_t* dom, size_t capacity)
     {
-        ptr = lxb_dom_collection_make(dom, capacity);
-        if (!ptr && dom) Log(LogLevel::WARNING, "Failed to create collection!");
+        ptr = lxb_dom_collection_make(&dom->dom_document, capacity);
+        if (!ptr) Abort_AllocFailed();
     }
 
     Collection(Collection&& other) : ptr(std::exchange(other.ptr, nullptr)) {}
@@ -127,14 +126,17 @@ class HTML
 {
 public:
     HTML();
-    HTML(std::string_view data);
+
+    static std::optional<HTML> FromString(std::string_view data);
+
+    HTML(HTML&& other) : dom(std::exchange(other.dom, nullptr)) {}
 
     HTML(const HTML& other) = delete;
     HTML& operator=(const HTML& other) = delete;
 
     ~HTML();
 
-    void Parse(std::string_view data);
+    [[nodiscard]] bool Parse(std::string_view data);
 
     lxb_html_document_t* Data() const;
 
@@ -164,5 +166,5 @@ private:
     void _SearchAttr(lxb_dom_collection_t* c, std::string_view attr, std::string_view val,
                     Element root={ Element::ROOT }, bool broad=false) const;
 
-    lxb_html_document_t* dom;
+    lxb_html_document_t* dom = nullptr;
 };

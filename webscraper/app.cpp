@@ -83,9 +83,11 @@ static void SendQuery(const std::vector<Result>& results, App* app,
 static Result TC_GetProduct_Parse(TaskContext ctx, const Store* store,
     const std::string& data)
 {
-    HTML html(data);
+    auto html = HTML::FromString(data);
 
-    std::optional<Product> product = store->GetProductAtURL(html);
+    if (!html) return { ResultType::GENERIC_ERROR, nullptr };
+
+    std::optional<Product> product = store->GetProductAtURL(html.value());
     if (!product) return { ResultType::GENERIC_ERROR, nullptr };
 
     return { ResultType::GENERIC_VALID, new Product(std::move(*product)) };

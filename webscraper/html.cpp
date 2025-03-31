@@ -55,22 +55,25 @@ lxb_dom_element_t* Element::Data() const { return ptr; }
 HTML::HTML()
 {
     dom = lxb_html_document_create();
-    if (!dom) Log(LogLevel::WARNING, "Error creating DOM");
+    if (!dom) Abort_AllocFailed();
 }
 
-HTML::HTML(std::string_view data) : HTML() { Parse(data); }
+std::optional<HTML> HTML::FromString(std::string_view data)
+{
+    HTML html;
+    if (html.Parse(data)) {
+        return { std::move(html) };
+    }
+
+    return {};
+}
 
 HTML::~HTML() { lxb_html_document_destroy(dom); }
 
-void HTML::Parse(std::string_view data)
+[[nodiscard]] bool HTML::Parse(std::string_view data)
 {
-    lxb_status_t status =
-        lxb_html_document_parse(dom,
-            reinterpret_cast<const lxb_char_t*>(data.data()), data.size());
-
-    if (status != LXB_STATUS_OK) {
-        Log(LogLevel::WARNING, "Reading page failed with status: {}", status);
-    }
+    return lxb_html_document_parse(dom,
+        reinterpret_cast<const lxb_char_t*>(data.data()), data.size()) == LXB_STATUS_OK;
 }
 
 lxb_html_document_t* HTML::Data() const { return dom; }
@@ -80,21 +83,19 @@ lxb_html_document_t* HTML::Data() const { return dom; }
 Collection<Element> HTML::SearchTag(std::string_view tag,
                               Element root) const
 {
-    Collection<Element> col(&(dom->dom_document), 16);
+    Collection<Element> col(dom, 16);
     _SearchTag(col.Data(), tag, root);
 
     return col;
 }
 
-void HTML::SearchTag(Collection<Element>& col, std::string_view tag,
-               Element root) const
+void HTML::SearchTag(Collection<Element>& col, std::string_view tag, Element root) const
 {
-    if (!col.Data()) col = Collection<Element>(&(dom->dom_document), 16);
+    if (!col.Data()) col = Collection<Element>(dom, 16);
     _SearchTag(col.Data(), tag, root);
 }
 
-void HTML::_SearchTag(lxb_dom_collection_t* c, std::string_view tag,
-                    Element root) const
+void HTML::_SearchTag(lxb_dom_collection_t* c, std::string_view tag, Element root) const
 {
     lxb_dom_element_t* rootptr = Resolve(root);
     lxb_dom_collection_clean(c);
@@ -107,35 +108,34 @@ void HTML::_SearchTag(lxb_dom_collection_t* c, std::string_view tag,
 }
 
 Collection<Element> HTML::SearchAttr(std::string_view attr, std::string_view val,
-                               Element root,
-                               bool broad) const
+     Element root, bool broad) const
 {
-    Collection<Element> col(&(dom->dom_document), 16);
+    Collection<Element> col(dom, 16);
     _SearchAttr(col.Data(), attr, val, root, broad);
 
     return col;
 }
 
 void HTML::SearchAttr(Collection<Element>& col, std::string_view attr,
-                std::string_view val, Element root, bool broad) const
+    std::string_view val, Element root, bool broad) const
 {
-    if (!col.Data()) col = Collection<Element>(&(dom->dom_document), 16);
+    if (!col.Data()) col = Collection<Element>(dom, 16);
     _SearchAttr(col.Data(), attr, val, root, broad);
 }
 
 Collection<Element> HTML::SearchClass(std::string_view name, Element root,
-                                bool broad) const
+    bool broad) const
 {
-    Collection<Element> col(&(dom->dom_document), 16);
+    Collection<Element> col(dom, 16);
     _SearchAttr(col.Data(), "class", name, root, broad);
 
     return col;
 }
 
 void HTML::SearchClass(Collection<Element>& col, std::string_view name,
-                 Element root, bool broad) const
+    Element root, bool broad) const
 {
-    if (!col.Data()) col = Collection<Element>(&(dom->dom_document), 16);
+    if (!col.Data()) col = Collection<Element>(dom, 16);
     _SearchAttr(col.Data(), "class", name, root, broad);
 }
 
@@ -150,7 +150,7 @@ lxb_dom_element_t* HTML::Resolve(Element e) const
 }
 
 void HTML::_SearchAttr(lxb_dom_collection_t* c, std::string_view attr,
-                  std::string_view val, Element root, bool broad) const
+    std::string_view val, Element root, bool broad) const
 {
     lxb_dom_element_t* rootptr = Resolve(root);
     lxb_dom_collection_clean(c);

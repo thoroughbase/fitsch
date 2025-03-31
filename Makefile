@@ -9,7 +9,7 @@ LDFLAGS := $(LIBRARIES) -rpath /usr/local/lib
 # Webscraper building
 
 FITSCH_WEBSCRAPER_TARGET := fitsch-webscraper
-FITSCH_WEBSCRAPER_SOURCE := $(wildcard webscraper/*.cpp) common/product.cpp
+FITSCH_WEBSCRAPER_SOURCE := $(wildcard webscraper/*.cpp) common/product.cpp common/util.cpp
 FITSCH_WEBSCRAPER_OBJECTS := $(FITSCH_WEBSCRAPER_SOURCE:%.cpp=$(BUILD_DIR)/%.o)
 FITSCH_WEBSCRAPER_DEPENDENCIES := $(FITSCH_WEBSCRAPER_OBJECTS:%.o=%.d)
 
