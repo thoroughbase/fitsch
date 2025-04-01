@@ -55,23 +55,23 @@ int main()
         Log(static_cast<LogLevel>(level), "{}", message);
     });
 
-    auto bclient = std::make_unique<bux::Client>(bux::ClientPreferences {
+    bux::Client bclient({
         .teamname = "webserver",
         .format = bux::MessageFormat::MSGPACK
     });
 
-    bclient->IPConnect("localhost", 1637).if_err([&bclient] (bux::ConnectError e) {
+    bclient.IPConnect("localhost", 1637).if_err([&bclient] (bux::ConnectError e) {
         Log(LogLevel::WARNING, "Failed to connect to buxtehude server: {}, retrying...",
             e.What());
-        RetryConnection(*bclient);
+        RetryConnection(bclient);
     });
 
-    bclient->SetDisconnectHandler([] (bux::Client& client) {
+    bclient.SetDisconnectHandler([] (bux::Client& client) {
         Log(LogLevel::WARNING, "Connection dropped to buxtehude server, retrying...");
         RetryConnection(client);
     });
 
-    QueryHandler query_handler(*bclient.get(), "webscraper");
+    QueryHandler query_handler(bclient, "webscraper");
 
     CROW_ROUTE(crow_app, "/")([] () {
         return crow::mustache::load("index.html").render();
