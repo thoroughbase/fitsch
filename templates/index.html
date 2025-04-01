@@ -13,14 +13,20 @@
 
 <body>
 <div class="banner">
-    <p>Fitsch</p>
-    <input type="search" id="search-field" placeholder="Search"></input>
-    <input type="button" id="search-button"></input>
-    <img id="search-field-icon" src="/static/images/icons/search.png"
-         width=16 height=16></img>
-    <img id="search-button-icon" src="/static/images/icons/search.png"
-         width=20 height=20></img>
+    <p id="header-title">Fitsch</p>
+    <div id="search-field-div">
+        <input type="search" id="search-field" placeholder="Search">
+        </input>
+        <img id="search-field-icon" src="/static/images/icons/search.png"
+             width=16 height=16></img>
+    </div>
+    <div id="search-button-div">
+        <input type="button" id="search-button"></input>
+        <img id="search-button-icon" src="/static/images/icons/search.png"
+             width=20 height=20></img>
+    </div>
 </div>
+<div id="banner-underneath"></div>
 
 <script src="/static/script.js"></script>
 
