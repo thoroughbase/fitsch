@@ -9,6 +9,7 @@
 #include <mongocxx/client.hpp>
 #include <mongocxx/pool.hpp>
 #include <mongocxx/uri.hpp>
+#include <mongocxx/exception/exception.hpp>
 #include <bsoncxx/json.hpp>
 
 #include <nlohmann/json.hpp>
@@ -33,10 +34,6 @@ public:
             return {};
         }
 
-        mongocxx::pool::entry client = pool->acquire();
-        mongocxx::database db = (*client)["fitsch"];
-        mongocxx::collection collection = db.collection(collection_name);
-
         json search_term = {
             { field, {{ "$in", terms }} }
         };
@@ -44,6 +41,9 @@ public:
         std::vector<T> matches;
         matches.reserve(terms.size());
         try {
+            mongocxx::pool::entry client = pool->acquire();
+            mongocxx::database db = (*client)["fitsch"];
+            mongocxx::collection collection = db.collection(collection_name);
             mongocxx::cursor results
                 = collection.find(bsoncxx::from_json(search_term.dump()));
 
@@ -51,7 +51,7 @@ public:
                 json j = json::parse(bsoncxx::to_json(r));
                 matches.emplace_back(j.get<T>());
             }
-        } catch (const std::exception& e) {
+        } catch (const mongocxx::exception& e) {
             Log(LogLevel::WARNING, "Error searching with term `{}`: {}",
                 search_term.dump(), e.what());
         }
@@ -70,10 +70,6 @@ public:
 
         if (items.empty()) return;
 
-        mongocxx::pool::entry client = pool->acquire();
-        mongocxx::database db = (*client)["fitsch"];
-        mongocxx::collection collection = db.collection(collection_name);
-
         auto removals =
             items | std::views::transform([field] (const json& item) {
                 return item[field].get<std::string>();
@@ -89,9 +85,12 @@ public:
         };
 
         try {
+            mongocxx::pool::entry client = pool->acquire();
+            mongocxx::database db = (*client)["fitsch"];
+            mongocxx::collection collection = db.collection(collection_name);
             collection.delete_many(bsoncxx::from_json(remove_command.dump()));
             collection.insert_many(docs);
-        } catch (const std::exception& e) {
+        } catch (const mongocxx::exception& e) {
             Log(LogLevel::WARNING, "Error putting documents: {}", e.what());
         }
     }
