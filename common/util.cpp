@@ -1,7 +1,9 @@
 #include "util.hpp"
 
-[[noreturn]] void Abort_AllocFailed()
+#include <stdexcept>
+
+void Abort_AllocFailed()
 {
-    Log(LogLevel::SEVERE, "Failed to allocate memory, aborting");
-    std::abort();
+    Log(LogLevel::SEVERE, "Failed to allocate memory");
+    throw std::runtime_error("Failed to allocate memory");
 }

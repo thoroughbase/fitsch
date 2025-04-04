@@ -26,7 +26,7 @@ void Log(LogLevel l, fmt::format_string<T...> format, T&&... args)
                fmt::vformat(format, fmt::make_format_args(args...)));
 }
 
-[[noreturn]] void Abort_AllocFailed();
+void Abort_AllocFailed();
 
 // Making up for lack of C++23/26 span & range features
 namespace tb
