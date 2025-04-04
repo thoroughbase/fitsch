@@ -102,4 +102,5 @@ private:
     std::thread thread;
 
     GeneralCURLContext general_context;
+    event* interrupt_event = nullptr;
 };

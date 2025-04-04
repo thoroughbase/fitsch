@@ -128,6 +128,13 @@ void CURLDriver::Init(unsigned pool_size, std::string_view user_agent)
 {
     general_context.ebase = event_base_new();
     general_context.multi_handle = curl_multi_init();
+    interrupt_event = event_new(general_context.ebase, -1, 0,
+        Libevent_InterruptCallback, &general_context);
+
+    if (!general_context.ebase || !general_context.multi_handle || !interrupt_event) {
+        Abort_AllocFailed();
+    }
+
     CURLM* multi_handle = general_context.multi_handle;
 
     curl_multi_setopt(multi_handle, CURLMOPT_SOCKETFUNCTION, CURL_SocketInfoCallback);
@@ -147,6 +154,10 @@ void CURLDriver::Init(unsigned pool_size, std::string_view user_agent)
         info.add_transfer_event = event_new(general_context.ebase, -1, 0,
             Libevent_AddTransferCallback, &(*easy_handles.find(easy_handle)));
 
+        if (!easy_handle || !info.add_transfer_event) {
+            Abort_AllocFailed();
+        }
+
         curl_easy_setopt(easy_handle, CURLOPT_WRITEFUNCTION, CURL_WriteData);
         curl_easy_setopt(easy_handle, CURLOPT_WRITEDATA, &info.buffer);
         curl_easy_setopt(easy_handle, CURLOPT_USERAGENT, user_agent.data());
@@ -157,8 +168,6 @@ void CURLDriver::Init(unsigned pool_size, std::string_view user_agent)
 
 CURLDriver::~CURLDriver()
 {
-    event* interrupt_event = event_new(general_context.ebase, -1, 0,
-        Libevent_InterruptCallback, &general_context);
     event_active(interrupt_event, 0, 0);
 
     if (thread.joinable()) thread.join();
