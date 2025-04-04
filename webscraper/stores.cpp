@@ -368,7 +368,8 @@ ProductList AL_ParseProductSearch(std::string_view data, size_t depth)
         // Parsing this string as a PricePU will yield the correct unit, but
         // not the price. The actual price per unit is in /price/comparison
 
-        if (item["sellingSize"].is_string()) {
+        if (item["sellingSize"].is_string() && item.contains("/price_comparison")
+            && item["/price/comparison"].is_number()) {
             product.price_per_unit
                 = PricePU::FromString(item["sellingSize"].get<std::string>());
             product.price_per_unit.price = {
