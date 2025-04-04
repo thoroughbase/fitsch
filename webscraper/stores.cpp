@@ -65,12 +65,6 @@ ProductList SVLike_ParseProductSearch(const Store& store, std::string_view data,
                                       size_t depth)
 {
     // TODO: Reimplement reading multiple pages
-
-    ProductList results(depth);
-    results.products.reserve(depth > 0 ? depth : 30);
-
-    Collection<Element> item_listings, name_c, price_c, price_per_c, image_c, url_c;
-
     std::optional<HTML> html_opt = HTML::FromString(data);
     if (!html_opt) {
         Log(LogLevel::WARNING, "Failed to parse HTML!");
@@ -79,8 +73,13 @@ ProductList SVLike_ParseProductSearch(const Store& store, std::string_view data,
 
     HTML& html = html_opt.value();
 
-    html.SearchClass(item_listings, "ColListing", Element::BODY, true);
+    Collection<Element> item_listings
+        = html.SearchClass("ColListing", Element::BODY, true);
 
+    ProductList results(depth);
+    results.products.reserve(item_listings.size());
+
+    Collection<Element> name_c, price_c, price_per_c, image_c, url_c;
     for (Element e : item_listings) {
         html.SearchAttr(name_c, "data-testid", "ProductNameTestId", e, true);
         html.SearchClass(price_c, "ProductCardPrice-", e, true);
@@ -188,6 +187,7 @@ ProductList TE_ParseProductSearch(std::string_view data, size_t depth)
         Element::BODY, true);
 
     ProductList results(depth);
+    results.products.reserve(item_listings.size());
     Collection<Element> title_c, name_c, image_div_c, image_c, price_c, price_per_c;
     for (Element e : item_listings) {
         html.SearchAttr(title_c, "data-auto", "product-tile--title", e, true);
@@ -334,6 +334,7 @@ ProductList AL_ParseProductSearch(std::string_view data, size_t depth)
 
     json& items = json_obj["data"];
     ProductList results;
+    results.products.reserve(items.size());
     for (json& item : items) {
         Product product {
             .store = stores::Aldi.id,
