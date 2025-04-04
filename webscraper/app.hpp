@@ -34,7 +34,7 @@ struct AppConfig
 class App
 {
 public:
-    App(std::string_view cfg_path);
+    App(AppConfig& config);
     ~App();
 
     void AddStore(const Store* store);

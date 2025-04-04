@@ -7,7 +7,18 @@
 
 int main(int argc, char** argv)
 {
-    App a(argc > 1 ? argv[1] : "config.json");
+    Log(LogLevel::INFO, "Starting Fitsch {}", FITSCH_VERSION);
+
+    std::string_view cfg_path = argc > 1 ? argv[1] : "config.json";
+
+    std::optional<AppConfig> config = AppConfig::FromJSONFile(cfg_path);
+    if (!config) {
+        Log(LogLevel::SEVERE, "Couldn't read config, exiting");
+        return 1;
+    }
+
+    App a(config.value());
+
     a.AddStore(&stores::SuperValu);
     a.AddStore(&stores::Tesco);
     a.AddStore(&stores::DunnesStores);

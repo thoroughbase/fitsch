@@ -277,7 +277,8 @@ void App::RetryConnection()
 
 // App
 
-App::App(std::string_view cfg_path)
+App::App(AppConfig& cfg_temp) : database(cfg_temp.mongodb_uri),
+    config(std::move(cfg_temp))
 {
     CURLDriver::GlobalInit();
     bux::Initialise([] (bux::LogLevel level, std::string_view msg) {
@@ -285,19 +286,7 @@ App::App(std::string_view cfg_path)
         Log(static_cast<LogLevel>(level), "(buxtehude) {}", msg);
     });
 
-    Log(LogLevel::INFO, "Starting Fitsch {}", FITSCH_VERSION);
-
-    std::optional<AppConfig> maybe_config = AppConfig::FromJSONFile(cfg_path);
-    if (!maybe_config) {
-        Log(LogLevel::SEVERE, "Couldn't read config, exiting");
-        std::exit(EXIT_FAILURE);
-    }
-
-    config = std::move(*maybe_config);
-
     curl_driver.Init(32, config.curl_useragent);
-
-    database.Connect({ config.mongodb_uri });
 
     bclient.preferences = {
         .format = bux::MessageFormat::MSGPACK,

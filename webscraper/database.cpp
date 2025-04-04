@@ -6,20 +6,13 @@
 
 using nlohmann::json;
 
-Database::Database(const mongocxx::uri& uri) { Connect(uri); }
-
-bool Database::Connect(const mongocxx::uri& uri)
+Database::Database(std::string_view uri) : pool(mongocxx::uri { std::string(uri) })
 {
-    pool = std::make_unique<mongocxx::pool>(uri);
-    if (Ping()) {
+    if ((valid = Ping())) {
         Log(LogLevel::INFO, "Connected to database.");
-        valid = true;
     } else {
         Log(LogLevel::SEVERE, "Failed to establish connection to database");
-        valid = false;
     }
-
-    return valid;
 }
 
 std::vector<Product> Database::GetProducts(std::span<const std::string> ids)
@@ -47,7 +40,7 @@ bool Database::Ping()
 {
     try {
         json ping = { { "ping", 1 } };
-        mongocxx::pool::entry client = pool->acquire();
+        mongocxx::pool::entry client = pool.acquire();
         mongocxx::database admindb = (*client)["admin"];
         admindb.run_command(bsoncxx::from_json(ping.dump()));
     } catch (const mongocxx::exception& e) {

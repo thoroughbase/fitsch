@@ -21,8 +21,7 @@ class Database
 {
 public:
     Database() = default;
-    Database(const mongocxx::uri& uri);
-    bool Connect(const mongocxx::uri& uri);
+    Database(std::string_view uri);
 
     template<typename T>
     std::vector<T> Get(const std::string& collection_name, std::string_view field,
@@ -41,7 +40,7 @@ public:
         std::vector<T> matches;
         matches.reserve(terms.size());
         try {
-            mongocxx::pool::entry client = pool->acquire();
+            mongocxx::pool::entry client = pool.acquire();
             mongocxx::database db = (*client)["fitsch"];
             mongocxx::collection collection = db.collection(collection_name);
             mongocxx::cursor results
@@ -85,7 +84,7 @@ public:
         };
 
         try {
-            mongocxx::pool::entry client = pool->acquire();
+            mongocxx::pool::entry client = pool.acquire();
             mongocxx::database db = (*client)["fitsch"];
             mongocxx::collection collection = db.collection(collection_name);
             collection.delete_many(bsoncxx::from_json(remove_command.dump()));
@@ -105,7 +104,7 @@ public:
     bool Ping();
 
 private:
-    std::unique_ptr<mongocxx::pool> pool;
     mongocxx::instance instance;
+    mongocxx::pool pool;
     bool valid = false;
 };
