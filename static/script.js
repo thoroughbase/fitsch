@@ -3,6 +3,7 @@ const search_button = document.getElementById("search-button");
 const search_button_div = document.getElementById("search-button-div");
 const search_bar_div = document.getElementById("search-field-div");
 const header_title = document.getElementById("header-title");
+const MOBILE_VIEWPORT_WIDTH_THRESHOLD = 500;
 
 search_bar.addEventListener("keyup", (event) => {
     if (event.key !== "Enter") return;
@@ -19,14 +20,27 @@ search_bar.addEventListener("blur", (event) => {
 });
 
 window.addEventListener("resize", (event) => {
-    if (window.innerWidth < 500 && document.activeElement !== search_bar) {
-        search_bar_div.style.visibility = "hidden";
-        search_button_div.style.visibility = "visible";
-    } else {
-        search_bar_div.style.visibility = "visible";
-        search_button_div.style.visibility = "hidden";
-    }
+    update_header();
 });
+
+function update_header()
+{
+    if (window.innerWidth < MOBILE_VIEWPORT_WIDTH_THRESHOLD) {
+        if (document.activeElement !== search_bar) {
+            search_bar_div.style.visibility = "hidden";
+            search_button_div.style.visibility = "visible";
+            header_title.style.visibility = "visible";
+        } else {
+            search_bar_div.style.visibility = "visible";
+            search_button_div.style.visibility = "hidden";
+            header_title.style.visibility = "hidden";
+        }
+    } else {
+        header_title.style.visibility = "visible";
+        search_button_div.style.visibility = "hidden";
+        search_bar_div.style.visibility = "visible";
+    }
+}
 
 function search()
 {
@@ -39,7 +53,7 @@ function focus_search_bar_small()
 {
     search_bar_div.style.visibility = "visible";
     search_bar.focus();
-    if (window.innerWidth < 500) {
+    if (window.innerWidth < MOBILE_VIEWPORT_WIDTH_THRESHOLD) {
         search_button_div.style.visibility = "hidden";
         header_title.style.visibility = "hidden";
     }
@@ -47,13 +61,5 @@ function focus_search_bar_small()
 
 function unfocus_search_bar_small()
 {
-    if (window.innerWidth < 500 && document.activeElement !== search_bar) {
-        search_bar_div.style.visibility = "hidden";
-        search_button_div.style.visibility = "visible";
-    } else {
-        search_bar_div.style.visibility = "visible";
-        search_button_div.style.visibility = "hidden";
-    }
-
-    header_title.style.visibility = "visible";
+    update_header();
 }
