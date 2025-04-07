@@ -16,7 +16,7 @@
 #include <buxtehude/buxtehude.hpp>
 
 constexpr std::string_view FITSCH_VERSION = "0.0.1";
-constexpr std::time_t ENTRY_EXPIRY_TIME_SECONDS = 86400 * 2;
+constexpr std::time_t DEFAULT_ENTRY_EXPIRY_TIME_SECONDS = 86400 * 2;
 
 namespace bux = buxtehude;
 
@@ -25,6 +25,7 @@ struct AppConfig
     std::string mongodb_uri;
     std::string curl_useragent;
     std::string bux_path_or_hostname = "localhost";
+    std::time_t entry_expiry_time_seconds = DEFAULT_ENTRY_EXPIRY_TIME_SECONDS;
     bux::ConnectionType bux_conn_type = bux::ConnectionType::INTERNET;
     uint16_t bux_port = bux::DEFAULT_PORT;
 
@@ -46,11 +47,11 @@ public:
     CURLDriver curl_driver;
     Database database;
     bux::Client bclient;
+    AppConfig config;
 
 private:
     void RetryConnection();
     bux::tb::error<bux::ConnectError> BuxConnect();
 
-    AppConfig config;
     std::unordered_map<StoreID, const Store*> stores;
 };

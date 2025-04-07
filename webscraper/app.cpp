@@ -164,7 +164,7 @@ static Result TC_GetQueriesDB(TaskContext ctx, App* app,
         const QueryTemplate& query_info = templates[0];
         std::time_t now = std::time(nullptr);
         if (query_info.depth < depth
-            || now - query_info.timestamp > ENTRY_EXPIRY_TIME_SECONDS) {
+            || now - query_info.timestamp > app->config.entry_expiry_time_seconds) {
             missing = stores;
         } else {
             if (!std::ranges::includes(query_info.stores, stores)) {
@@ -247,6 +247,12 @@ std::optional<AppConfig> AppConfig::FromJSONFile(std::string_view path)
         const json& port = cfg_json["buxtehude"]["port"];
         if (port.is_number())
             result.bux_port = port;
+    }
+
+    if (cfg_json.contains("/entry-expiry-time-seconds"_json_pointer)) {
+        const json& time = cfg_json["entry-expiry-time-seconds"];
+        if (time.is_number())
+            result.entry_expiry_time_seconds = time;
     }
 
     return result;
