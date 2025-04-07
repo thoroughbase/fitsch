@@ -85,6 +85,8 @@ int main()
         if (!curl_str)
             return crow::response("Invalid search term - failed to unescape URL");
 
+        tb::scoped_guard free_curlstr = [curl_str] { curl_free(curl_str); };
+
         std::string non_lowercase(curl_str, unescaped_len);
 
         for (int i = 0; i < unescaped_len; ++i) curl_str[i] = tolower(curl_str[i]);
@@ -130,7 +132,6 @@ int main()
             { "item_count", static_cast<uint64_t>(names.size()) }
         }};
 
-        curl_easy_cleanup(curl_str);
         crow::mustache::template_t page = crow::mustache::load("results.html");
         return crow::response(page.render(ctx));
     });
