@@ -208,21 +208,17 @@ void CURLDriver::GlobalCleanup()
 void CURLDriver::PerformTransfer_NoLock(std::string_view url, TransferDoneCallback&& cb,
     const CURLOptions& options)
 {
-    CURL* easy_handle = nullptr;
-    EasyHandleInfo* handle_info = nullptr;
+    auto iter = std::ranges::find_if(easy_handles, [] (auto pair) {
+        return std::get<EasyHandleInfo>(pair).available;
+    });
 
-    for (auto& [handle, info] : easy_handles) {
-        if (!info.available) continue;
-        easy_handle = handle;
-        handle_info = &info;
-        break;
-    }
-
-    if (!easy_handle) {
+    if (iter == easy_handles.end()) {
         pending.emplace(std::string(url), std::forward<TransferDoneCallback>(cb),
             options);
         return;
     }
+
+    auto& [easy_handle, handle_info] = *iter;
 
     switch (options.method) {
     case CURLOptions::Method::GET:
@@ -239,14 +235,14 @@ void CURLDriver::PerformTransfer_NoLock(std::string_view url, TransferDoneCallba
     if (options.headers->header_list)
         curl_easy_setopt(easy_handle, CURLOPT_HTTPHEADER, options.headers->header_list);
 
-    handle_info->callback = std::move(cb);
-    handle_info->available = false;
-    handle_info->buffer.clear();
-    handle_info->options = options;
+    handle_info.callback = std::move(cb);
+    handle_info.available = false;
+    handle_info.buffer.clear();
+    handle_info.options = options;
 
     // Initiating transfers via a libevent callback ensures that CURL callbacks
     // are only ever triggered from one thread for thread-safety with no locks
-    event_active(handle_info->add_transfer_event, 0, 0);
+    event_active(handle_info.add_transfer_event, 0, 0);
 }
 
 void CURLDriver::PerformNextInQueue()
