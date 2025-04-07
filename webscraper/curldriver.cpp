@@ -116,6 +116,7 @@ CURLHeaders::CURLHeaders(std::span<std::string_view> headers)
         curl_slist* success = curl_slist_append(header_list, header.c_str());
         if (!success) {
             Log(LogLevel::SEVERE, "Failed to create header list!");
+            Abort_AllocFailed();
             return;
         }
         header_list = success;
