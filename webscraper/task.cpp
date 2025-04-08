@@ -40,6 +40,36 @@ void ExternalTaskHandle::Finish(Result&& result) const
 
 Delegator::Delegator(int max_tasks) : max_concurrent_tasks(max_tasks) {}
 
+unsigned Delegator::QueueTasks(UnboundResultCallback&& ub_rcb, std::span<Task> tasks)
+{
+    std::lock_guard<std::mutex> tasks_guard(task_mutex);
+    std::lock_guard<std::mutex> results_guard(results_mutex);
+
+    ++current_group_id;
+
+    auto [iterator, success] = results.emplace(current_group_id, ResultsContainer {
+        .expecting = tasks.size(),
+        .results = {},
+        .result_cb = std::move(ub_rcb.result_cb)
+    });
+
+    auto& [key, container_ref] = *iterator;
+
+    container_ref.results.reserve(tasks.size());
+
+    TryRun(current_group_id, tasks);
+    return current_group_id;
+}
+
+void Delegator::QueueExtraTasks(unsigned id, std::span<Task> tasks)
+{
+    std::lock_guard<std::mutex> guard(task_mutex);
+
+    auto& [key, container_ref] = *(results.find(id));
+    container_ref.expecting += tasks.size();
+    TryRun(id, tasks);
+}
+
 void Delegator::RunNextTask()
 {
     std::lock_guard<std::mutex> tasks_guard(task_mutex);
@@ -49,6 +79,32 @@ void Delegator::RunNextTask()
         Task& task = task_queue.front();
         TryRun(task.group_id, tb::make_span({ std::move(task) }));
         task_queue.pop();
+    }
+}
+
+void Delegator::TryRun(unsigned id, std::span<Task> tasks)
+{
+    for (Task& task : tasks) {
+        task.group_id = id;
+        if (running_tasks >= max_concurrent_tasks) {
+            task_queue.emplace(std::move(task));
+            return;
+        }
+
+        ++running_tasks;
+
+        std::thread thread([this] (Task&& task) {
+            Result result = task.task_cb(TaskContext {
+                .delegator = *this,
+                .group_id = task.group_id
+            });
+            ProcessResult(task.group_id, std::move(result));
+
+            --running_tasks;
+            RunNextTask();
+        }, std::move(task));
+
+        thread.detach();
     }
 }
 

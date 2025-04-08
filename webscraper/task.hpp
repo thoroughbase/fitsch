@@ -106,71 +106,15 @@ class Delegator
 public:
     Delegator(int max_tasks);
 
-    template<size_t N=std::dynamic_extent>
-    unsigned QueueTasks(UnboundResultCallback&& ub_rcb, std::span<Task, N> tasks)
-    {
-        std::lock_guard<std::mutex> tasks_guard(task_mutex);
-        std::lock_guard<std::mutex> results_guard(results_mutex);
-
-        ++current_group_id;
-
-        auto [iterator, success] = results.emplace(current_group_id, ResultsContainer {
-            .expecting = tasks.size(),
-            .results = {},
-            .result_cb = std::move(ub_rcb.result_cb)
-        });
-
-        auto& [key, container_ref] = *iterator;
-
-        container_ref.results.reserve(tasks.size());
-
-        TryRun(current_group_id, tasks);
-        return current_group_id;
-    }
-
-    template<size_t N=std::dynamic_extent>
-    void QueueExtraTasks(unsigned id, std::span<Task, N> tasks)
-    {
-        std::lock_guard<std::mutex> guard(task_mutex);
-
-        auto& [key, container_ref] = *(results.find(id));
-        container_ref.expecting += tasks.size();
-        TryRun(id, tasks);
-    }
-
+    unsigned QueueTasks(UnboundResultCallback&& ub_rcb, std::span<Task> tasks);
+    void QueueExtraTasks(unsigned id, std::span<Task> tasks);
     ExternalTaskHandle QueueExternalTask(UnboundResultCallback&& ub_rcb);
     ExternalTaskHandle QueueExtraExternalTask(unsigned id);
 
     void RunNextTask();
 
 private:
-    template<size_t N=std::dynamic_extent>
-    void TryRun(unsigned id, std::span<Task, N> tasks)
-    {
-        for (Task& task : tasks) {
-            task.group_id = id;
-            if (running_tasks >= max_concurrent_tasks) {
-                task_queue.emplace(std::move(task));
-                return;
-            }
-
-            ++running_tasks;
-
-            std::thread thread([this] (Task&& task) {
-                Result result = task.task_cb(TaskContext {
-                    .delegator = *this,
-                    .group_id = task.group_id
-                });
-                ProcessResult(task.group_id, std::move(result));
-
-                --running_tasks;
-                RunNextTask();
-            }, std::move(task));
-
-            thread.detach();
-        }
-    }
-
+    void TryRun(unsigned id, std::span<Task> tasks);
     void ProcessResult(unsigned id, Result&& result);
 
 private:
