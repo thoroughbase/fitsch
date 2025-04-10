@@ -1,9 +1,9 @@
 #include "util.hpp"
 
-#include <stdexcept>
+#include <new>
 
 void Abort_AllocFailed()
 {
     Log(LogLevel::SEVERE, "Failed to allocate memory");
-    throw std::runtime_error("Failed to allocate memory");
+    throw std::bad_alloc {};
 }
