@@ -31,12 +31,12 @@
 
 <div class="results-banner">
 <h3>"{{ term }}"</h3>
-<p>{{ item_count }} results</p>
+<p id="item-count">{{ item_count }} results</p>
 </div>
 
-<div class="listings">
+<div id="listings" class="listings">
 {{#item_listings}}
-<div class="item-listing">
+<div class="item-listing" store-id="{{store}}">
 <div class="item-info">
     <p class="item-name"><b>{{ name }}</b></p>
     <p class="item-price"><b>{{ price }}</b> | {{ ppu }}</p>

@@ -45,6 +45,17 @@ std::string_view GetStoreLogo(StoreID store_id)
     }
 }
 
+std::string_view GetStoreName(StoreID store_id)
+{
+    switch (store_id) {
+    case StoreID::SUPERVALU:     return "SuperValu";
+    case StoreID::LIDL:          return "LIDL";
+    case StoreID::TESCO:         return "Tesco";
+    case StoreID::ALDI:          return "Aldi";
+    case StoreID::DUNNES_STORES: return "Dunnes Stores";
+    }
+}
+
 int main()
 {
     crow::SimpleApp crow_app;
@@ -122,7 +133,8 @@ int main()
                 { "price", crow::json::wvalue(p.item_price.ToString()) },
                 { "ppu", crow::json::wvalue(p.price_per_unit.ToString()) },
                 { "url", crow::json::wvalue(std::move(p.url)) },
-                { "logo_url", crow::json::wvalue(GetStoreLogo(p.store).data()) }
+                { "logo_url", crow::json::wvalue(GetStoreLogo(p.store).data()) },
+                { "store", crow::json::wvalue(GetStoreName(p.store).data()) }
             });
         }
 

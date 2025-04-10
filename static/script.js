@@ -4,6 +4,9 @@ const search_button_div = document.getElementById("search-button-div");
 const search_bar_div = document.getElementById("search-field-div");
 const header_title = document.getElementById("header-title");
 const MOBILE_VIEWPORT_WIDTH_THRESHOLD = 500;
+const listings_element = document.getElementById("listings");
+const original_listings = [...listings_element.children];
+const item_count = document.getElementById("item-count");
 
 search_bar.addEventListener("keyup", (event) => {
     if (event.key !== "Enter") return;
@@ -22,6 +25,16 @@ search_bar.addEventListener("blur", (event) => {
 window.addEventListener("resize", (event) => {
     update_header();
 });
+
+function filter_products_by_store(stores)
+{
+    const new_listings = original_listings.filter((elem) => {
+        return stores.includes(elem.getAttribute("store-id"))
+    });
+
+    listings_element.replaceChildren(...new_listings);
+    item_count.innerText = listings_element.children.length + " results";
+}
 
 function update_header()
 {
