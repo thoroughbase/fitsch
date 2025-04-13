@@ -54,13 +54,14 @@ std::future<QueryResultsMap> QueryHandler::SendQuery(std::string_view query)
     });
 
     bclient.Write({
-        .dest = webscraper_name, .type = "query", .only_first = true,
+        .dest = webscraper_name, .type = "query",
         .content = {
             { "terms", json::array({ query }) },
             { "request-id", id },
             { "depth", 10 },
             { "stores", std::move(stores) }
-        }
+        },
+        .only_first = true
     }).if_err([] (bux::WriteError) {
         Log(LogLevel::WARNING, "Failed to write request");
     });

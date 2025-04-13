@@ -58,9 +58,9 @@ constexpr Store SuperValu =
     .homepage = "https://shop.supervalu.ie/sm/delivery/rsid/5550",
     .root_url = "https://shop.supervalu.ie",
     .region = Region::IE,
+    .ParseProductSearch = SV_ParseProductSearch,
     .GetProductSearchURL = SV_GetProductSearchURL,
     .GetProductAtURL = SV_GetProductAtURL,
-    .ParseProductSearch = SV_ParseProductSearch,
     .GetProductSearchCURLOptions = Default_GetProductSearchCURLOptions
 };
 
@@ -69,9 +69,9 @@ constexpr Store Tesco = {
     .homepage = "https://www.tesco.ie/groceries/en-IE",
     .root_url = "https://www.tesco.ie",
     .region = Region::IE,
+    .ParseProductSearch = TE_ParseProductSearch,
     .GetProductSearchURL = TE_GetProductSearchURL,
     .GetProductAtURL = TE_GetProductAtURL,
-    .ParseProductSearch = TE_ParseProductSearch,
     .GetProductSearchCURLOptions = Default_GetProductSearchCURLOptions
 };
 
@@ -80,9 +80,9 @@ constexpr Store DunnesStores = {
     .homepage = "https://www.dunnesstoresgrocery.com",
     .root_url = "https://www.dunnesstoresgrocery.com",
     .region = Region::IE,
+    .ParseProductSearch = DS_ParseProductSearch,
     .GetProductSearchURL = DS_GetProductSearchURL,
     .GetProductAtURL = DS_GetProductAtURL,
-    .ParseProductSearch = DS_ParseProductSearch,
     .GetProductSearchCURLOptions = Default_GetProductSearchCURLOptions
 };
 
@@ -91,9 +91,9 @@ constexpr Store Aldi = {
     .homepage = "https://aldi.ie",
     .root_url = "https://aldi.ie",
     .region = Region::IE,
+    .ParseProductSearch = AL_ParseProductSearch,
     .GetProductSearchURL = AL_GetProductSearchURL,
     .GetProductAtURL = AL_GetProductAtURL,
-    .ParseProductSearch = AL_ParseProductSearch,
     .GetProductSearchCURLOptions = AL_GetProductSearchCURLOptions
 };
 

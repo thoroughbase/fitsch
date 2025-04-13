@@ -108,15 +108,16 @@ ProductList SVLike_ParseProductSearch(const Store& store, std::string_view data,
         str_id.remove_suffix(str_id.size() - str_id.find('-'));
 
         Product product {
-            .store = store.id,
             .name { name_text_node.Text() },
+            .image_url { image_c[0].GetAttrValue("src") },
+            .url { url_c[0].GetAttrValue("href") },
+            .id = fmt::format("{}{}", store.prefix, str_id),
             .item_price =
                 Price::FromString(std::string { price_c[0].FirstChild().Text() }),
             .price_per_unit = PricePU::FromString(price_per_c[0].FirstChild().Text()),
-            .id = fmt::format("{}{}", store.prefix, str_id),
-            .url { url_c[0].GetAttrValue("href") },
-            .image_url { image_c[0].GetAttrValue("src") },
-            .timestamp = std::time(nullptr)
+            .store = store.id,
+            .timestamp = std::time(nullptr),
+            .full_info = false
         };
 
         if (product.price_per_unit.unit == Unit::None) {
@@ -217,15 +218,16 @@ ProductList TE_ParseProductSearch(std::string_view data, size_t depth)
             ppu_view.remove_suffix(ppu_view.size() - end_substr);
 
         Product product = {
-            .store = stores::Tesco.id,
-            .full_info = false,
             .name { name_c[0].FirstChild().Text() },
-            .id = fmt::format("{}{}", stores::Tesco.prefix, id),
-            .url = fmt::format("{}{}", stores::Tesco.root_url, relative_url),
             .image_url { srcset },
+            .url = fmt::format("{}{}", stores::Tesco.root_url, relative_url),
+            .id = fmt::format("{}{}", stores::Tesco.prefix, id),
             .item_price =
                 Price::FromString(std::string { price_c[0].FirstChild().Text() }),
-            .price_per_unit = PricePU::FromString(ppu_view)
+            .price_per_unit = PricePU::FromString(ppu_view),
+            .store = stores::Tesco.id,
+            .timestamp = time(NULL),
+            .full_info = false,
         };
 
         results.products.emplace_back(std::move(product),
@@ -287,13 +289,15 @@ std::optional<Product> TE_GetProductAtURL(const HTML& html)
     const std::string sku = product_info["sku"].get<std::string>();
 
     Product result = {
-        .store = stores::Tesco.id, .name = product_info["name"],
+        .name = product_info["name"],
         .description = product_info["description"],
-        .id = fmt::format("{}{}", stores::Tesco.prefix, sku),
         .image_url = product_info["image"][0],
+        .url = fmt::format("{}/products/{}", stores::Tesco.homepage, sku),
+        .id = fmt::format("{}{}", stores::Tesco.prefix, sku),
         .item_price = Price { Currency::EUR, price },
+        .store = stores::Tesco.id,
         .timestamp = std::time(nullptr),
-        .url = fmt::format("{}/products/{}", stores::Tesco.homepage, sku)
+        .full_info = true
     };
 
     Collection<Element> priceper = html.SearchClass("ddsweb-price__subtext",
@@ -337,18 +341,19 @@ ProductList AL_ParseProductSearch(std::string_view data, size_t depth)
     results.products.reserve(items.size());
     for (json& item : items) {
         Product product {
-            .store = stores::Aldi.id,
             .name = fmt::format("{} {}", item["brandName"].get<std::string>(),
                                 item["name"].get<std::string>()),
             .description = {},
+            .url = fmt::format("{}/product/{}", stores::Aldi.root_url,
+                item["sku"].get<std::string>()),
             .id = fmt::format("{}{}", stores::Aldi.prefix,
                 item["sku"].get<std::string>()),
             .item_price = Price {
                 Currency::EUR, item["price"]["amount"].get<unsigned>()
             },
+            .store = stores::Aldi.id,
             .timestamp = std::time(nullptr),
-            .url = fmt::format("{}/product/{}", stores::Aldi.root_url,
-                item["sku"].get<std::string>())
+            .full_info = false
         };
 
         if (!item["assets"].empty()) {
@@ -416,7 +421,7 @@ std::optional<Product> AL_GetProductAtURL(const HTML& html)
 CURLOptions AL_GetProductSearchCURLOptions(std::string_view query)
 {
     return {
-        .method = CURLOptions::Method::GET,
-        .headers = &CURLHEADERS_ALDI
+        .headers = &CURLHEADERS_ALDI,
+        .method = CURLOptions::Method::GET
     };
 }

@@ -17,7 +17,7 @@ struct RequestInfo
 {
     std::promise<QueryResultsMap> promise;
     QueryResultsMap results;
-    int expecting;
+    unsigned expecting;
 };
 
 class QueryHandler

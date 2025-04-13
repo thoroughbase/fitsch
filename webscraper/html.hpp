@@ -2,6 +2,7 @@
 
 #include <string>
 #include <type_traits>
+#include <utility>
 
 #include <lexbor/html/parser.h>
 #include <lexbor/dom/interfaces/element.h>

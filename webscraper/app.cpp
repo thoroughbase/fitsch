@@ -59,7 +59,7 @@ static void SendQuery(const std::vector<Result>& results, App* app,
 
     std::vector<Product> products = list.AsProductVector();
 
-    app->bclient.Write({ .type = "query-result", .dest = dest,
+    app->bclient.Write({ .dest = dest, .type = "query-result",
         .content = {
             { "items", products },
             { "term", query_string },
@@ -204,7 +204,7 @@ std::optional<AppConfig> AppConfig::FromJSONFile(std::string_view path)
 {
     AppConfig result;
 
-    std::ifstream cfg_file { path };
+    std::ifstream cfg_file(path.data());
 
     if (!cfg_file.is_open()) {
         Log(LogLevel::WARNING, "Failed to open config file '{}'", path);
@@ -295,8 +295,8 @@ App::App(AppConfig& cfg_temp) : database(cfg_temp.mongodb_uri),
     curl_driver.Init(32, config.curl_useragent);
 
     bclient.preferences = {
-        .format = bux::MessageFormat::MSGPACK,
-        .teamname = "webscraper"
+        .teamname = "webscraper",
+        .format = bux::MessageFormat::MSGPACK
     };
 
     bclient.AddHandler("query", [this] (bux::Client& client, const bux::Message& msg) {

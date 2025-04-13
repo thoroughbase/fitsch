@@ -43,6 +43,7 @@ std::string_view GetStoreLogo(StoreID store_id)
     case StoreID::ALDI:          return "/static/images/logos/aldi.png";
     case StoreID::DUNNES_STORES: return "/static/images/logos/dunnes.png";
     }
+    return {};
 }
 
 std::string_view GetStoreName(StoreID store_id)
@@ -54,6 +55,7 @@ std::string_view GetStoreName(StoreID store_id)
     case StoreID::ALDI:          return "Aldi";
     case StoreID::DUNNES_STORES: return "Dunnes Stores";
     }
+    return {};
 }
 
 int main()

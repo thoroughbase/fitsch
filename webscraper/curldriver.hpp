@@ -8,6 +8,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <thread>
+#include <functional>
 
 #include <curl/curl.h>
 #include <event2/event.h>

@@ -46,7 +46,7 @@ int main()
     });
 
     bux::Client terminal({
-        .teamname = "terminal",
+        .teamname = "terminal"
     });
 
     terminal.AddHandler("query-result", [] (bux::Client& cl, const bux::Message& m) {
@@ -74,13 +74,14 @@ int main()
         });
 
         terminal.Write({
-            .type = "query", .dest = "webscraper", .only_first = true,
+             .dest = "webscraper", .type = "query",
             .content = {
                 { "terms", terms },
                 { "request-id", 0 },
                 { "stores", std::move(stores) },
                 { "depth", 10 }
-            }
+            },
+            .only_first = true,
         }).ignore_error();
     }
 

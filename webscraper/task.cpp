@@ -48,9 +48,9 @@ unsigned Delegator::QueueTasks(UnboundResultCallback&& ub_rcb, std::span<Task> t
     ++current_group_id;
 
     auto [iterator, success] = results.emplace(current_group_id, ResultsContainer {
-        .expecting = tasks.size(),
+        .result_cb = std::move(ub_rcb.result_cb),
         .results = {},
-        .result_cb = std::move(ub_rcb.result_cb)
+        .expecting = tasks.size()
     });
 
     auto& [key, container_ref] = *iterator;
@@ -115,9 +115,9 @@ ExternalTaskHandle Delegator::QueueExternalTask(UnboundResultCallback&& ub_rcb)
     ++current_group_id;
 
     results.emplace(current_group_id, ResultsContainer {
-        .expecting = 1,
+        .result_cb = std::move(ub_rcb.result_cb),
         .results = {},
-        .result_cb = std::move(ub_rcb.result_cb)
+        .expecting = 1
     });
 
     return { *this, current_group_id };
