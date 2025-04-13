@@ -209,7 +209,7 @@ void CURLDriver::GlobalCleanup()
 void CURLDriver::PerformTransfer_NoLock(std::string_view url, TransferDoneCallback&& cb,
     const CURLOptions& options)
 {
-    auto iter = std::ranges::find_if(easy_handles, [] (auto pair) {
+    auto iter = std::ranges::find_if(easy_handles, [] (auto& pair) {
         return std::get<EasyHandleInfo>(pair).available;
     });
 
