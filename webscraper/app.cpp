@@ -78,52 +78,6 @@ static void SendQuery(const std::vector<Result>& results, App* app,
     }
 }
 
-// TaskCallbacks
-// Single product
-static Result TC_GetProduct_Parse(TaskContext ctx, const Store* store,
-    const std::string& data)
-{
-    auto html = HTML::FromString(data);
-
-    if (!html) return { ResultType::GENERIC_ERROR, nullptr };
-
-    std::optional<Product> product = store->GetProductAtURL(html.value());
-    if (!product) return { ResultType::GENERIC_ERROR, nullptr };
-
-    return { ResultType::GENERIC_VALID, new Product(std::move(*product)) };
-}
-
-static Result TC_GetProduct_Fetch(TaskContext ctx, App* app, const std::string& url,
-    const Store* store)
-{
-    ExternalTaskHandle handle = ctx.delegator.QueueExtraExternalTask(ctx.group_id);
-    app->curl_driver.PerformTransfer(url, [handle, ctx, store] (auto data, auto url,
-        CURLcode code) {
-        if (code == CURLE_OK) {
-            ctx.delegator.QueueExtraTasks(ctx.group_id, tb::make_span({
-                Task { TC_GetProduct_Parse, store, std::string { data } }
-            }));
-        } else {
-            handle.Finish({ ResultType::GENERIC_ERROR, nullptr });
-        }
-        handle.Finish({});
-    });
-
-    return {};
-}
-
-// Product list
-static Result TC_DoQuery_Parse(TaskContext ctx, const Store* store,
-    const std::string& data, size_t depth)
-{
-    ProductList list = store->ParseProductSearch(data, depth);
-
-    return {
-        ResultType::GENERIC_VALID,
-        new std::pair<bool, ProductList>(true, std::move(list))
-    };
-}
-
 static Result TC_DoQuery(TaskContext ctx, App* app, const std::string& query_string,
     const StoreSelection& stores, size_t depth)
 {
@@ -139,11 +93,16 @@ static Result TC_DoQuery(TaskContext ctx, App* app, const std::string& query_str
         ExternalTaskHandle handle = ctx.delegator.QueueExtraExternalTask(ctx.group_id);
 
         app->curl_driver.PerformTransfer(url,
-        [handle, ctx, store, depth] (auto data, auto url, CURLcode code) {
-            ctx.delegator.QueueExtraTasks(ctx.group_id, tb::make_span({
-                Task { TC_DoQuery_Parse, store, std::string { data }, depth }
-            }));
-            handle.Finish({});
+        [handle, store, depth] (auto data, auto url, CURLcode code) {
+            if (code == CURLE_OK) {
+                ProductList list = store->ParseProductSearch(data, depth);
+                handle.Finish({
+                    ResultType::GENERIC_VALID,
+                    new std::pair<bool, ProductList>(true, std::move(list))
+                });
+            } else {
+                handle.Finish({ ResultType::GENERIC_ERROR, nullptr });
+            }
         }, request_options);
     }
 
@@ -343,19 +302,41 @@ const Store* App::GetStore(StoreID id)
     return stores[id];
 }
 
-void App::GetProductAtURL(StoreID store, std::string_view item_url)
+void App::GetProductAtURL(StoreID store_id, std::string_view item_url)
 {
-    if (!stores.contains(store)) {
+    const Store* store = GetStore(store_id);
+    if (store == nullptr) {
         Log(LogLevel::WARNING, "Invalid store!");
         return;
     }
 
-    delegator.QueueTasks(
-        { PrintProduct, this, std::string { item_url } },
-        tb::make_span({
-            Task { TC_GetProduct_Fetch, this, std::string { item_url }, stores[store] }
-        })
-    );
+    ExternalTaskHandle handle = delegator.QueueExternalTask({
+        PrintProduct, this, std::string { item_url }
+    });
+
+    curl_driver.PerformTransfer(item_url, [handle, store] (auto data, auto url,
+        CURLcode code) {
+        if (code == CURLE_OK) {
+            std::optional<HTML> html = HTML::FromString(data);
+            if (!html) {
+                handle.Finish({ ResultType::GENERIC_ERROR, nullptr });
+                return;
+            }
+
+            std::optional<Product> product = store->GetProductAtURL(html.value());
+            if (!product) {
+                handle.Finish({ ResultType::GENERIC_ERROR, nullptr });
+                return;
+            }
+
+            handle.Finish({
+                ResultType::GENERIC_VALID,
+                new Product(std::move(*product))
+            });
+        } else {
+            handle.Finish({ ResultType::GENERIC_ERROR, nullptr });
+        }
+    });
 }
 
 bux::tb::error<bux::ConnectError> App::BuxConnect()
