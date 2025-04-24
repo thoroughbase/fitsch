@@ -10,6 +10,7 @@
 
 #include "common/validate.hpp"
 #include "common/product.hpp"
+#include "common/util.hpp"
 
 using nlohmann::json;
 
@@ -32,17 +33,22 @@ int main()
 {
     namespace bux = buxtehude;
 
-    bux::Initialise();
-
-    bux::Server server;
-    server.InternalServer().if_err([] (bux::AllocError) {
-        fmt::print("Failed to start buxtehude server, exiting...\n");
-        std::exit(1);
+    bux::Initialise([] (bux::LogLevel level, std::string_view message) {
+        Log(static_cast<LogLevel>(level), "(buxtehude) {}", message);
     });
 
-    server.IPServer(1637).if_err([] (bux::ListenError) {
-        fmt::print("Failed to start buxtehude INET server, exiting...\n");
-        std::exit(1);
+    bux::Server server;
+
+    auto quit_error = [&] { server.Close(); std::exit(1); };
+
+    server.InternalServer().if_err([&] (bux::AllocError) {
+        Log(LogLevel::SEVERE, "Failed to start buxtehude server\n");
+        quit_error();
+    });
+
+    server.IPServer(1637).if_err([&] (bux::ListenError e) {
+        Log(LogLevel::SEVERE, "Failed to start buxtehude INET server: {}\n", e.What());
+        quit_error();
     });
 
     bux::Client terminal({
@@ -74,7 +80,7 @@ int main()
         });
 
         terminal.Write({
-             .dest = "webscraper", .type = "query",
+            .dest = "webscraper", .type = "query",
             .content = {
                 { "terms", terms },
                 { "request-id", 0 },
