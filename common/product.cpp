@@ -89,7 +89,7 @@ Price Price::FromString(std::string str)
         price.value = std::stoi(view.substr(0, ss_point).data()) * 100;
         if (ss_point != std::string::npos)
             price.value += std::stoi(view.substr(ss_point + 1).data());
-    } catch (const std::exception& e) {
+    } catch (const std::logic_error& e) {
         Log(LogLevel::WARNING, "Error converting string {} to Price: {}", str, e.what());
         return {};
     }
