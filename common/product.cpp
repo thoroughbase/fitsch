@@ -148,10 +148,8 @@ PricePU PricePU::FromString(std::string_view str)
 
     std::string_view unit_view = str;
     unit_view.remove_prefix(separator_index + 1);
-    std::string lowercase_unit { unit_view };
-    for (char& c : lowercase_unit) {
-        c = tolower(c);
-    }
+    auto lowercase_unit = unit_view | std::views::transform(tolower)
+                        | tb::range_to<std::string>();
     std::string_view price_view(str.data(), separator_index);
 
     if (!UNIT_CONVERSIONS.contains(lowercase_unit)) {
