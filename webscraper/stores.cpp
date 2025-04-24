@@ -87,6 +87,16 @@ ProductList SVLike_ParseProductSearch(const Store& store, std::string_view data,
         html.SearchClass(image_c, "ProductCardImage-", e, true);
         html.SearchClass(url_c, "ProductCardHiddenLink", e, true);
 
+        // For Dunnes Stores - 24/4/25
+        if (!price_c.size())
+            html.SearchClass(price_c, "ProductPrice-", e, true);
+
+        if (!price_per_c.size())
+            html.SearchClass(price_per_c, "ProductUnitPrice-", e, true);
+
+        if (!image_c.size())
+            html.SearchClass(image_c, "ProductImage-", e, true);
+
         if (!name_c.size() || !price_c.size() || !price_per_c.size()
          || !image_c.size() || !url_c.size()) {
             Log(LogLevel::WARNING, "One or more details missing for product {} on page",
