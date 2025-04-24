@@ -93,10 +93,11 @@ struct UnboundResultCallback
 struct ExternalTaskHandle
 {
 public:
-    ExternalTaskHandle(Delegator& delegator, unsigned id);
-
     void Finish(Result&& result) const;
 private:
+    friend Delegator;
+    ExternalTaskHandle(Delegator& delegator, unsigned id);
+
     Delegator& delegator;
     unsigned group_id;
 };
