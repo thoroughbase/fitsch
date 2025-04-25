@@ -51,6 +51,13 @@ int main()
         quit_error();
     });
 
+    server.UnixServer(".fitsch_bux").if_err([&] (bux::ListenError e) {
+        Log(LogLevel::SEVERE, "Failed to start buxtehude UNIX server: {}\n", e.What());
+        if (e.type != bux::ListenErrorType::BIND_ERROR) {
+            quit_error();
+        }
+    });
+
     bux::Client terminal({
         .teamname = "terminal"
     });
