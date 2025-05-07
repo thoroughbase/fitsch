@@ -5,7 +5,8 @@ const search_bar_div = document.getElementById("search-field-div");
 const header_title = document.getElementById("header-title");
 const MOBILE_VIEWPORT_WIDTH_THRESHOLD = 500;
 const listings_element = document.getElementById("listings");
-const original_listings = [...listings_element.children];
+const original_listings
+    = (listings_element === null) ? [] : [...listings_element.children];
 const item_count = document.getElementById("item-count");
 
 search_bar.addEventListener("keyup", (event) => {
