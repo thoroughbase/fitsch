@@ -97,10 +97,13 @@ ProductList SVLike_ParseProductSearch(const Store& store, std::string_view data,
         if (!image_c.size())
             html.SearchClass(image_c, "ProductImage-", e, true);
 
-        if (!name_c.size() || !price_c.size() || !price_per_c.size()
-         || !image_c.size() || !url_c.size()) {
-            Log(LogLevel::WARNING, "One or more details missing for product {} on page",
-                results.products.size());
+        if (!name_c.size() || !price_c.size() || !image_c.size() || !url_c.size()) {
+            Log(LogLevel::WARNING,
+                "Incomplete product info for product #{} (Store: {})\n"
+                "  Name: {}, Price: {}, Price Per: {}, Image: {}, URL: {}\n",
+                results.products.size(), store.name,
+                name_c.size() > 0, price_c.size() > 0, price_per_c.size() > 0,
+                image_c.size() > 0, url_c.size() > 0);
             continue;
         }
 
@@ -110,7 +113,8 @@ ProductList SVLike_ParseProductSearch(const Store& store, std::string_view data,
 
         if (!name_text_node) {
             Log(LogLevel::WARNING,
-                "Name not found for product {}", results.products.size());
+                "Name not found for product #{} (Store: {})",
+                results.products.size(), store.name);
             continue;
         }
 
@@ -124,11 +128,16 @@ ProductList SVLike_ParseProductSearch(const Store& store, std::string_view data,
             .id = fmt::format("{}{}", store.prefix, str_id),
             .item_price =
                 Price::FromString(std::string { price_c[0].FirstChild().Text() }),
-            .price_per_unit = PricePU::FromString(price_per_c[0].FirstChild().Text()),
             .store = store.id,
+            .price_per_unit = {},
             .timestamp = std::time(nullptr),
             .full_info = false
         };
+
+        if (price_per_c.size()) {
+            product.price_per_unit
+                = PricePU::FromString(price_per_c[0].FirstChild().Text());
+        }
 
         if (product.price_per_unit.unit == Unit::None) {
             product.price_per_unit.unit = Unit::Piece;
