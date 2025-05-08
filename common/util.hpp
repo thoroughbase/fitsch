@@ -21,8 +21,9 @@ void Log(LogLevel l, fmt::format_string<T...> format, T&&... args)
 
     if (l < MIN_LOG_LEVEL) return;
 
-    fmt::print("[{} {:%H:%M:%S}] {}\n", LEVEL_NAMES[static_cast<size_t>(l)],
+    fmt::print("[{:%Y/%m/%d %H:%M:%S} {}] {}\n",
                fmt::localtime(std::time(nullptr)),
+               LEVEL_NAMES[static_cast<size_t>(l)],
                fmt::vformat(format, fmt::make_format_args(args...)));
 }
 
