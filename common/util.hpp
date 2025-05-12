@@ -207,12 +207,6 @@ struct enum_selection
     IntegerType _enum_field;
 };
 
-template<class E> requires std::is_enum_v<E> && (!detail::enum_selection_disabled<E>)
-constexpr enum_selection<E> operator|(E a, E b)
-{
-    return enum_selection<E>::to_int(a) | enum_selection<E>::to_int(b);
-}
-
 using nlohmann::json;
 
 template<class E>
@@ -227,4 +221,10 @@ void from_json(const json& j, enum_selection<E> es)
     es = j.get<typename enum_selection<E>::IntegerType>();
 }
 
+}
+
+template<class E> requires std::is_enum_v<E> && (!tb::detail::enum_selection_disabled<E>)
+constexpr tb::enum_selection<E> operator|(E a, E b)
+{
+    return tb::enum_selection<E>::to_int(a) | tb::enum_selection<E>::to_int(b);
 }
