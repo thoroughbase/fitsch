@@ -14,7 +14,7 @@
 enum class LogLevel { DEBUG = 0, INFO = 1, WARNING = 2, SEVERE = 3 };
 constexpr auto MIN_LOG_LEVEL = LogLevel::DEBUG;
 
-template <typename... T>
+template<typename... T>
 void Log(LogLevel l, fmt::format_string<T...> format, T&&... args)
 {
     constexpr static auto LEVEL_NAMES = std::to_array<std::string_view>({
@@ -69,39 +69,39 @@ struct scoped_guard
     ~scoped_guard() { lambda(); }
 };
 
-template<class T>
+template<typename T>
 struct disable_enum_selection;
 
 namespace detail
 {
 
-template<class T>
+template<typename T>
 struct get_enum_int;
 
-template<class T, class U>
+template<typename T, typename U>
 concept same_size = sizeof(T) == sizeof(U);
 
-template<class T> requires same_size<T, uint8_t>
+template<typename T> requires same_size<T, uint8_t>
 struct get_enum_int<T> { using type = uint8_t; };
 
-template<class T> requires same_size<T, uint16_t>
+template<typename T> requires same_size<T, uint16_t>
 struct get_enum_int<T> { using type = uint16_t; };
 
-template<class T> requires same_size<T, uint32_t>
+template<typename T> requires same_size<T, uint32_t>
 struct get_enum_int<T> { using type = uint32_t; };
 
-template<class T> requires same_size<T, uint64_t>
+template<typename T> requires same_size<T, uint64_t>
 struct get_enum_int<T> { using type = uint64_t; };
 
-template<class T>
+template<typename T>
 struct dependent_false : std::false_type {};
 
-template<class T>
+template<typename T>
 concept enum_selection_disabled = requires { { disable_enum_selection<T> {} }; };
 
 }
 
-template<class EnumType> requires std::is_enum_v<EnumType>
+template<typename EnumType> requires std::is_enum_v<EnumType>
 struct enum_selection
 {
     using IntegerType = typename detail::get_enum_int<EnumType>::type;
@@ -209,13 +209,13 @@ struct enum_selection
 
 using nlohmann::json;
 
-template<class E>
+template<typename E>
 void to_json(json& j, enum_selection<E> es)
 {
     j = es._enum_field;
 }
 
-template<class E>
+template<typename E>
 void from_json(const json& j, enum_selection<E>& es)
 {
     es = j.get<typename enum_selection<E>::IntegerType>();
@@ -223,7 +223,7 @@ void from_json(const json& j, enum_selection<E>& es)
 
 }
 
-template<class E> requires std::is_enum_v<E> && (!tb::detail::enum_selection_disabled<E>)
+template<typename E> requires std::is_enum_v<E> && (!tb::detail::enum_selection_disabled<E>)
 constexpr tb::enum_selection<E> operator|(E a, E b)
 {
     return tb::enum_selection<E>::to_int(a) | tb::enum_selection<E>::to_int(b);
