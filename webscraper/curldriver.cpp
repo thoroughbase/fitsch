@@ -289,7 +289,7 @@ void CURLDriver::Drive()
         CURLM* multi_handle = general_context.multi_handle;
 
         int messages;
-        CURLMsg* message;
+        const CURLMsg* message;
         while ((message = curl_multi_info_read(multi_handle, &messages))
             != nullptr) {
 
@@ -304,7 +304,7 @@ void CURLDriver::Drive()
 
             EasyHandleInfo& info = easy_handles[message->easy_handle];
 
-            char* url = nullptr;
+            const char* url = nullptr;
             curl_easy_getinfo(message->easy_handle, CURLINFO_EFFECTIVE_URL, &url);
 
             if (info.callback)
