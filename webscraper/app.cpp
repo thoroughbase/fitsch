@@ -127,8 +127,7 @@ static Result TC_GetQueriesDB(TaskContext ctx, App* app,
             missing = stores;
         } else {
             if (!query_info.stores.has(stores)) {
-                missing = stores;
-                for (StoreID id : query_info.stores) missing.toggle(id);
+                missing = stores.without(query_info.stores);
             }
 
             auto relevant_ids = std::views::keys(
