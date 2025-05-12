@@ -2,6 +2,7 @@
 
 #include <string>
 #include <cstdlib>
+#include <cstdint>
 #include <ctime>
 #include <algorithm>
 #include <span>
@@ -66,5 +67,149 @@ struct scoped_guard
     scoped_guard(Lambda&& lambda) : lambda(lambda) {}
     ~scoped_guard() { lambda(); }
 };
+
+template<class T>
+struct disable_enum_selection;
+
+namespace detail
+{
+
+template<class T>
+struct get_enum_int;
+
+template<class T, class U>
+concept same_size = sizeof(T) == sizeof(U);
+
+template<class T> requires same_size<T, uint8_t>
+struct get_enum_int<T> { using type = uint8_t; };
+
+template<class T> requires same_size<T, uint16_t>
+struct get_enum_int<T> { using type = uint16_t; };
+
+template<class T> requires same_size<T, uint32_t>
+struct get_enum_int<T> { using type = uint32_t; };
+
+template<class T> requires same_size<T, uint64_t>
+struct get_enum_int<T> { using type = uint64_t; };
+
+template<class T>
+struct dependent_false : std::false_type {};
+
+template<class T>
+concept enum_selection_disabled = requires { { disable_enum_selection<T> {} }; };
+
+}
+
+template<class EnumType> requires std::is_enum_v<EnumType>
+struct enum_selection
+{
+    using IntegerType = typename detail::get_enum_int<EnumType>::type;
+
+    struct iterator
+    {
+        constexpr iterator(IntegerType u) : _underlying(u)
+        {
+            while (_underlying != 0 && (_underlying & 1) == 0) {
+                _underlying >>= 1;
+                ++_bit;
+            }
+        }
+
+        constexpr EnumType operator*() { return static_cast<EnumType>(1 << _bit); }
+
+        constexpr bool operator!=(const iterator& other)
+        {
+            return other._underlying != _underlying;
+        }
+
+        constexpr void operator++()
+        {
+            do {
+                _underlying >>= 1;
+                ++_bit;
+            } while (_underlying != 0 && (_underlying & 1) == 0);
+        }
+
+        IntegerType _underlying = 0;
+        int _bit = 0;
+    };
+
+    constexpr enum_selection() : _enum_field(0) {}
+
+    constexpr static IntegerType to_int(auto e)
+    {
+        if constexpr (std::is_same_v<decltype(e), IntegerType>)
+            return e;
+        else if constexpr (std::is_same_v<decltype(e), EnumType>)
+            return static_cast<IntegerType>(e);
+        else if constexpr (std::is_same_v<decltype(e), int>) // integer promotion
+            return static_cast<IntegerType>(e);
+        else if constexpr (std::is_same_v<decltype(e), enum_selection<EnumType>>)
+            return e._enum_field;
+        else {
+            static_assert(detail::dependent_false<decltype(e)> {},
+                "Incompatible type for enum_selection");
+            return -1;
+        }
+    }
+
+    constexpr enum_selection(auto e) : _enum_field(to_int(e)) {}
+
+    constexpr enum_selection& operator|=(auto e)
+    {
+        _enum_field |= to_int(e);
+        return *this;
+    }
+
+    constexpr enum_selection operator&(auto e) const { return _enum_field & to_int(e); }
+
+    constexpr enum_selection operator|(auto e) const { return _enum_field | to_int(e); }
+
+    constexpr enum_selection operator^(auto e) const { return _enum_field ^ to_int(e); }
+
+    constexpr bool has(auto e) const { return (_enum_field & to_int(e)) == to_int(e); }
+
+    constexpr enum_selection with_toggled(auto e) const
+    {
+        return _enum_field ^ to_int(e);
+    }
+
+    constexpr enum_selection without(auto e) const
+    {
+        return (_enum_field | to_int(e)) ^ to_int(e);
+    }
+
+    constexpr enum_selection& add(auto e)
+    {
+        _enum_field |= to_int(e);
+        return *this;
+    }
+
+    constexpr enum_selection& toggle(auto e)
+    {
+        _enum_field ^= to_int(e);
+        return *this;
+    }
+
+    constexpr bool operator==(auto e) { return _enum_field == to_int(e); }
+
+    constexpr bool operator!=(auto e) { return _enum_field != to_int(e); }
+
+    constexpr operator bool() const { return _enum_field; }
+
+    constexpr IntegerType const as_int() { return _enum_field; }
+
+    constexpr iterator begin() const { return iterator { _enum_field }; }
+
+    constexpr iterator end() const { return iterator { 0 }; }
+
+    IntegerType _enum_field;
+};
+
+template<class E> requires std::is_enum_v<E> && (!detail::enum_selection_disabled<E>)
+constexpr enum_selection<E> operator|(E a, E b)
+{
+    return enum_selection<E>::to_int(a) | enum_selection<E>::to_int(b);
+}
 
 }
