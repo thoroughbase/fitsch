@@ -13,7 +13,15 @@
 
 using nlohmann::json;
 
-enum class StoreID { SUPERVALU, LIDL, TESCO, ALDI, DUNNES_STORES };
+enum class StoreID
+{
+    SUPERVALU = 1 << 0,
+    LIDL = 1 << 1,
+    TESCO = 1 << 2,
+    ALDI = 1 << 3,
+    DUNNES_STORES = 1 << 4
+};
+
 enum class Region { IE };
 
 enum class Unit
@@ -55,7 +63,7 @@ struct PricePU
 void to_json(json& j, const PricePU& p);
 void from_json(const json& j, PricePU& p);
 
-using StoreSelection = std::vector<StoreID>;
+using StoreSelection = tb::enum_selection<StoreID>;
 
 struct Product
 {
@@ -97,7 +105,7 @@ struct ProductList
     void Add(const ProductList& other);
 
     QueryTemplate AsQueryTemplate(std::string_view querystr,
-                                  const StoreSelection& ids) const;
+                                  StoreSelection ids) const;
     std::vector<Product> AsProductVector() const;
 
     std::vector<std::pair<Product, QueryResultInfo>> products;

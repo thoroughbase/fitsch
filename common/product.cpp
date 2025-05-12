@@ -190,7 +190,7 @@ void ProductList::Add(const ProductList& other)
 }
 
 QueryTemplate ProductList::AsQueryTemplate(std::string_view querystr,
-                                           const StoreSelection& ids) const
+                                           StoreSelection ids) const
 {
     QueryTemplate q_template {
         .query_string { querystr }, .stores { ids },

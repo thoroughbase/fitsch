@@ -43,7 +43,7 @@ static void PrintProduct(const std::vector<Result>& results, App* app,
 
 static void SendQuery(const std::vector<Result>& results, App* app,
     const std::string& dest, const std::string& query_string,
-    const StoreSelection& stores, int request_id)
+    StoreSelection stores, int request_id)
 {
     ProductList list;
     bool upload = false;
@@ -79,7 +79,7 @@ static void SendQuery(const std::vector<Result>& results, App* app,
 }
 
 static Result TC_DoQuery(TaskContext ctx, App* app, const std::string& query_string,
-    const StoreSelection& stores, size_t depth)
+    StoreSelection stores, size_t depth)
 {
     for (StoreID id : stores) {
         const Store* store = app->GetStore(id);
@@ -110,7 +110,7 @@ static Result TC_DoQuery(TaskContext ctx, App* app, const std::string& query_str
 }
 
 static Result TC_GetQueriesDB(TaskContext ctx, App* app,
-    const std::string& query_string, const StoreSelection& stores, size_t depth)
+    const std::string& query_string, StoreSelection stores, size_t depth)
 {
     ProductList list(depth);
     auto templates = app->database.GetQueryTemplates(tb::make_span({ query_string }));
@@ -126,9 +126,9 @@ static Result TC_GetQueriesDB(TaskContext ctx, App* app,
             || now - query_info.timestamp > app->config.entry_expiry_time_seconds) {
             missing = stores;
         } else {
-            if (!std::ranges::includes(query_info.stores, stores)) {
+            if (!query_info.stores.has(stores)) {
                 missing = stores;
-                for (StoreID id : query_info.stores) std::erase(missing, id);
+                for (StoreID id : query_info.stores) missing.toggle(id);
             }
 
             auto relevant_ids = std::views::keys(
@@ -145,7 +145,7 @@ static Result TC_GetQueriesDB(TaskContext ctx, App* app,
         }
     }
 
-    if (missing.size()) {
+    if (missing) {
         ctx.delegator.QueueExtraTasks(ctx.group_id, tb::make_span({
             Task { TC_DoQuery, app, query_string, missing, depth }
         }));
@@ -262,7 +262,7 @@ App::App(AppConfig& cfg_temp) : database(cfg_temp.mongodb_uri),
         if (!bux::ValidateJSON(msg.content, validate::QUERY)) return;
         int request_id = msg.content["request-id"];
         size_t depth = msg.content["depth"];
-        StoreSelection stores = msg.content["stores"];
+        auto stores = msg.content["stores"].get<StoreSelection>();
 
         for (const json& j : msg.content["terms"]) {
             auto term = j.get<std::string>();
