@@ -216,7 +216,7 @@ void to_json(json& j, enum_selection<E> es)
 }
 
 template<class E>
-void from_json(const json& j, enum_selection<E> es)
+void from_json(const json& j, enum_selection<E>& es)
 {
     es = j.get<typename enum_selection<E>::IntegerType>();
 }
