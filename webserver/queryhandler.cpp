@@ -49,9 +49,8 @@ std::future<QueryResultsMap> QueryHandler::SendQuery(std::string_view query)
 
     request_info.results.emplace(query, std::vector<Product> {});
 
-    auto stores = json::array({
-        StoreID::SUPERVALU, StoreID::DUNNES_STORES, StoreID::TESCO, StoreID::ALDI
-    });
+    StoreSelection stores = StoreID::SUPERVALU | StoreID::DUNNES_STORES
+                          | StoreID::TESCO | StoreID::ALDI;
 
     bclient.Write({
         .dest = webscraper_name, .type = "query",
@@ -59,7 +58,7 @@ std::future<QueryResultsMap> QueryHandler::SendQuery(std::string_view query)
             { "terms", json::array({ query }) },
             { "request-id", id },
             { "depth", 10 },
-            { "stores", std::move(stores) }
+            { "stores", stores }
         },
         .only_first = true
     }).if_err([] (bux::WriteError) {

@@ -82,16 +82,15 @@ int main()
         if (input == "quit") break;
 
         std::vector<std::string> terms = split(input, ',');
-        auto stores = json::array({
-            StoreID::SUPERVALU, StoreID::DUNNES_STORES, StoreID::TESCO, StoreID::ALDI
-        });
+        StoreSelection stores = StoreID::SUPERVALU | StoreID::DUNNES_STORES
+                              | StoreID::TESCO | StoreID::ALDI;
 
         terminal.Write({
             .dest = "webscraper", .type = "query",
             .content = {
                 { "terms", terms },
                 { "request-id", 0 },
-                { "stores", std::move(stores) },
+                { "stores", stores },
                 { "depth", 10 }
             },
             .only_first = true,

@@ -9,13 +9,6 @@ namespace validate
 
 using nlohmann::json;
 
-constexpr auto IsNumberArray = [] (const json& j) -> bool {
-    if (!j.is_array()) return false;
-    for (auto& element : j)
-        if (!element.is_number()) return false;
-    return true;
-};
-
 constexpr auto IsStringArray = [] (const json& j) -> bool {
     if (!j.is_array()) return false;
     for (auto& element : j)
@@ -32,7 +25,7 @@ inline const buxtehude::ValidationSeries QUERY_RESULT = {
 inline const buxtehude::ValidationSeries QUERY = {
     { "/terms"_json_pointer, IsStringArray },
     { "/request-id"_json_pointer, [] (const json& j) { return j.is_number(); } },
-    { "/stores"_json_pointer, IsNumberArray },
+    { "/stores"_json_pointer, [] (const json& j) { return j.is_number(); } },
     { "/depth"_json_pointer, [] (const json& j) { return j.is_number(); } }
 };
 
