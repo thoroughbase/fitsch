@@ -6,6 +6,7 @@
 #include <ctime>
 #include <algorithm>
 #include <span>
+#include <nlohmann/json.hpp>
 
 #include <fmt/format.h>
 #include <fmt/chrono.h>
@@ -210,6 +211,20 @@ template<class E> requires std::is_enum_v<E> && (!detail::enum_selection_disable
 constexpr enum_selection<E> operator|(E a, E b)
 {
     return enum_selection<E>::to_int(a) | enum_selection<E>::to_int(b);
+}
+
+using nlohmann::json;
+
+template<class E>
+void to_json(json& j, enum_selection<E> es)
+{
+    j = es._enum_field;
+}
+
+template<class E>
+void from_json(const json& j, enum_selection<E> es)
+{
+    es = j.get<typename enum_selection<E>::IntegerType>();
 }
 
 }
