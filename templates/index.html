@@ -4,6 +4,7 @@
 <head>
 <title>Fitsch</title>
 <link rel="stylesheet" href="/static/style.css">
+<script src="https://kit.fontawesome.com/82ae0cdd5e.js" crossorigin="anonymous"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap');
 </style>
@@ -15,19 +16,26 @@
 <div class="banner">
     <p id="header-title">Fitsch</p>
     <div id="search-field-div">
-        <input type="search" id="search-field" placeholder="Search">
+        <input type="search" id="search-field" placeholder="Search"
+               value="{{ term }}">
         </input>
         <img id="search-field-icon" src="/static/images/icons/search.png"
              width=16 height=16></img>
     </div>
-    <div id="search-button-div">
-        <input type="button" id="search-button"></input>
-        <img id="search-button-icon" src="/static/images/icons/search.png"
-             width=20 height=20></img>
+    <div id="buttons-div">
+        <button class="header-button" id="search-button">
+            <i class="fa-solid fa-magnifying-glass"></i>
+        </button>
+        <button class="header-button" id="settings-button">
+            <i class="fa-solid fa-sliders"></i>
+        </button>
+        <button class="header-button" id="home-button">
+            <i class="fa-solid fa-house"></i>
+        </button>
     </div>
 </div>
 <div id="banner-underneath"></div>
-
+<div id="overlay"></div>
 <script src="/static/script.js"></script>
 
 </body>

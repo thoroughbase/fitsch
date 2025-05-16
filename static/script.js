@@ -1,6 +1,7 @@
 const search_bar = document.getElementById("search-field");
 const search_button = document.getElementById("search-button");
-const search_button_div = document.getElementById("search-button-div");
+const home_button = document.getElementById("home-button");
+const buttons_div = document.getElementById("buttons-div");
 const search_bar_div = document.getElementById("search-field-div");
 const header_title = document.getElementById("header-title");
 const MOBILE_VIEWPORT_WIDTH_THRESHOLD = 500;
@@ -8,6 +9,7 @@ const listings_element = document.getElementById("listings");
 const original_listings
     = (listings_element === null) ? [] : [...listings_element.children];
 const item_count = document.getElementById("item-count");
+const overlay = document.getElementById("overlay");
 
 search_bar.addEventListener("keyup", (event) => {
     if (event.key !== "Enter") return;
@@ -19,13 +21,24 @@ search_button.addEventListener("click", (event) => {
     focus_search_bar_small();
 });
 
+home_button.addEventListener("click", (event) => {
+    window.location = "/";
+})
+
 search_bar.addEventListener("blur", (event) => {
     unfocus_search_bar_small();
+    overlay.style.opacity = 0;
 });
 
 window.addEventListener("resize", (event) => {
     update_header();
 });
+
+search_bar.addEventListener("focus", (event) => {
+    overlay.style.opacity = 0.15;
+});
+
+update_header();
 
 function filter_products_by_store(stores)
 {
@@ -37,22 +50,33 @@ function filter_products_by_store(stores)
     item_count.innerText = listings_element.children.length + " results";
 }
 
+function show_elements(elements)
+{
+    for (element of elements) {
+        element.style.visibility = "visible";
+    }
+}
+
+function hide_elements(elements)
+{
+    for (element of elements) {
+        element.style.visibility = "hidden";
+    }
+}
+
 function update_header()
 {
     if (window.innerWidth < MOBILE_VIEWPORT_WIDTH_THRESHOLD) {
         if (document.activeElement !== search_bar) {
-            search_bar_div.style.visibility = "hidden";
-            search_button_div.style.visibility = "visible";
-            header_title.style.visibility = "visible";
+            hide_elements([search_bar_div]);
+            show_elements([buttons_div, header_title, search_button]);
         } else {
-            search_bar_div.style.visibility = "visible";
-            search_button_div.style.visibility = "hidden";
-            header_title.style.visibility = "hidden";
+            show_elements([search_bar_div]);
+            hide_elements([search_button, buttons_div, header_title]);
         }
     } else {
-        header_title.style.visibility = "visible";
-        search_button_div.style.visibility = "hidden";
-        search_bar_div.style.visibility = "visible";
+        show_elements([header_title, search_bar_div, buttons_div]);
+        hide_elements([search_button]);
     }
 }
 
@@ -65,12 +89,9 @@ function search()
 
 function focus_search_bar_small()
 {
-    search_bar_div.style.visibility = "visible";
+    show_elements([search_bar_div]); // Required for focus to work
     search_bar.focus();
-    if (window.innerWidth < MOBILE_VIEWPORT_WIDTH_THRESHOLD) {
-        search_button_div.style.visibility = "hidden";
-        header_title.style.visibility = "hidden";
-    }
+    update_header();
 }
 
 function unfocus_search_bar_small()

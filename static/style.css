@@ -24,6 +24,19 @@ body h3 {
     display: flex;
     position: fixed;
     width: 100vw;
+    z-index: 2;
+}
+
+#overlay {
+    background-color: black;
+    opacity: 0;
+    transition: opacity 0.1s;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    position: fixed;
+    pointer-events: none;
+    cursor: default;
 }
 
 #banner-underneath {
@@ -41,6 +54,7 @@ body h3 {
 .listings {
     display: grid;
     gap: 12px 5vw;
+    grid-auto-rows: 100px;
     @media screen and (min-width: 200px) {
         grid-template-columns: repeat(1, 1fr);
         padding-left: 2%;
@@ -74,7 +88,8 @@ body h3 {
 
 .item-listing .product-image {
     border: 1px;
-    border-color: #bbbbdd;
+    border-radius: 6px;
+    border-color: #ddf;
     border-style: solid;
 }
 
@@ -97,12 +112,41 @@ body h3 {
     font-weight: 300;
 }
 
-.item-listing .product-buttons {
-    margin-top: auto;
+.item-listing .product-image {
+    width: 100px;
+    height: 100px;
 }
 
-.item-listing .product-add-to-list-button {
-    margin-left: 4px;
+.product-buttons {
+    margin-top: auto;
+    display: flex;
+    padding: 0;
+    gap: 8px;
+}
+
+.product-button {
+    border: 0;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    background-color: transparent;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.product-page-button {
+    border: 1px solid;
+    border-radius: 3px;
+    border-color: #ddf;
+}
+
+.product-button .fa-solid {
+    color: black;
+    transition: color 0.2s;
+}
+
+.product-button .fa-solid:hover {
+    color: #55b;
 }
 
 .item-listing {
@@ -111,6 +155,7 @@ body h3 {
     display: flex;
     width: 100%;
     height: 100%;
+    padding-bottom: 3px;
 }
 
 .item-image-div {
@@ -119,11 +164,12 @@ body h3 {
 
 .item-listing:hover {
     background-color: #e5e5ff;
+    transition: 0.2s;
 }
 
 #search-field {
     font-family: "Lato", serif;
-    border-radius: 32px;
+    border-radius: 12px;
     font-size: 20px;
     border: 1px;
     border-right: 0px;
@@ -159,6 +205,8 @@ body h3 {
 
 #search-field-icon {
     position: absolute;
+    pointer-events: none;
+    cursor: default;
     top: 20px;
     @media screen and (min-width: 200px) {
         left: calc(10% + 16px);
@@ -168,32 +216,32 @@ body h3 {
     }
 }
 
-#search-button-icon {
-    position: absolute;
-    left: calc(100% - 64px + 10px);
-    top: 18px;
-    pointer-events: none;
-    cursor: default;
+.header-button {
+    border: 0px solid #ccd;
+    border-radius: 12px;
+    width: 36px;
+    height: 36px;
+    background-color: #88d;
+    transition: background-color 0.2s;
+    cursor: pointer;
 }
 
-#search-button {
+.header-button:hover {
+    background-color: #99e;
+    transition: background-color 0.2s;
+}
+
+.header-button i {
+    font-size: 18px;
+}
+
+#buttons-div {
     position: absolute;
-    border: 1px solid #000;
-    border-radius: 32px;
-    width: 40px;
+    display: flex;
+    right: 16px;
     height: 40px;
-    top: 8px;
-    background-color: #aae;
-    left: calc(100% - 64px);
-}
-
-#search-button-div {
-    @media screen and (min-width: 200px) {
-        visibility: visible;
-    };
-    @media screen and (min-width: 500px) {
-        visibility: hidden;
-    };
+    top: 10px;
+    gap: 10px;
 }
 
 .results-banner {
@@ -210,6 +258,7 @@ body h3 {
     margin-bottom: 0px;
     text-align: center;
 }
+
 .results-banner p {
     margin-left: 0px;
     margin-top: 0px;

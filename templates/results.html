@@ -4,6 +4,7 @@
 <head>
 <title>Fitsch</title>
 <link rel="stylesheet" href="/static/style.css">
+<script src="https://kit.fontawesome.com/82ae0cdd5e.js" crossorigin="anonymous"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap');
 </style>
@@ -21,13 +22,20 @@
         <img id="search-field-icon" src="/static/images/icons/search.png"
              width=16 height=16></img>
     </div>
-    <div id="search-button-div">
-        <input type="button" id="search-button"></input>
-        <img id="search-button-icon" src="/static/images/icons/search.png"
-             width=20 height=20></img>
+    <div id="buttons-div">
+        <button class="header-button" id="search-button">
+            <i class="fa-solid fa-magnifying-glass"></i>
+        </button>
+        <button class="header-button" id="settings-button">
+            <i class="fa-solid fa-sliders"></i>
+        </button>
+        <button class="header-button" id="home-button">
+            <i class="fa-solid fa-house"></i>
+        </button>
     </div>
 </div>
 <div id="banner-underneath"></div>
+<div id="overlay"></div>
 
 <div class="results-banner">
 <h3>"{{ term }}"</h3>
@@ -41,16 +49,21 @@
     <p class="item-name"><b>{{ name }}</b></p>
     <p class="item-price"><b>{{ price }}</b> | {{ ppu }}</p>
     <div class="product-buttons">
-
-        <input type="image" src="{{ logo_url }}" width=24 height=24
-               class="product-page-button" onclick="window.open('{{url}}')"/>
-
-        <img class="product-add-to-list-button"
-             src="/static/images/icons/add-to-list.png" width=28 height=28></img>
+        <input type="image"
+               class="product-button product-page-button"
+               onclick="window.open('{{ url }}')"
+               src="{{ logo_url }}">
+        </input>
+        <button class="product-button product-bookmark-button">
+            <i class="fa-solid fa-bookmark fa"></i>
+        </button>
+        <button class="product-button product-report-button">
+            <i class="fa-solid fa-flag"></i>
+        </button>
     </div>
 </div>
 <div class="item-image-div">
-    <img class="product-image" src="{{ img }}" width=76 height=76></img>
+    <img class="product-image" src="{{ img }}"></img>
 </div>
 </div>
 {{/item_listings}}
