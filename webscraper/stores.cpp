@@ -358,58 +358,69 @@ ProductList AL_ParseProductSearch(std::string_view data, size_t depth)
     json& items = json_obj["data"];
     ProductList results;
     results.products.reserve(items.size());
+    size_t current_item = 0;
     for (json& item : items) {
-        Product product {
-            .name = fmt::format("{} {}", item["brandName"].get<std::string>(),
-                                item["name"].get<std::string>()),
-            .description = {},
-            .url = fmt::format("{}/product/{}", stores::Aldi.root_url,
-                item["sku"].get<std::string>()),
-            .id = fmt::format("{}{}", stores::Aldi.prefix,
-                item["sku"].get<std::string>()),
-            .item_price = Price {
-                Currency::EUR, item["price"]["amount"].get<unsigned>()
-            },
-            .store = stores::Aldi.id,
-            .timestamp = std::time(nullptr),
-            .full_info = false
-        };
+        ++current_item;
+        try {
+            const std::string brand_name
+                = item["brandName"].is_string() ? item["brandName"] : "";
 
-        if (!item["assets"].empty()) {
-            const std::string unescaped_image_url = item["assets"][0]["url"];
-
-            std::string_view product_image_id = unescaped_image_url;
-            constexpr size_t suffix_size = std::string_view("\\/{slug}").size();
-            product_image_id.remove_suffix(suffix_size - 1);
-            size_t image_id_start = product_image_id.rfind('/');
-            product_image_id.remove_prefix(image_id_start + 1);
-
-            product.image_url = fmt::format("{}/{}", BASE_IMAGE_URL, product_image_id);
-        } else {
-            product.image_url = FALLBACK_IMAGE_URL;
-        }
-
-        // Parsing this string as a PricePU will yield the correct unit, but
-        // not the price. The actual price per unit is in /price/comparison
-
-        if (item["sellingSize"].is_string()
-            && item.contains("/price/comparison"_json_pointer)
-            && item["/price/comparison"_json_pointer].is_number()) {
-            product.price_per_unit
-                = PricePU::FromString(item["sellingSize"].get<std::string>());
-            product.price_per_unit.price = {
-                Currency::EUR,
-                item["price"]["comparison"].get<unsigned>()
+            Product product {
+                .name = fmt::format("{} {}", brand_name,
+                                    item["name"].get<std::string>()),
+                .description = {},
+                .url = fmt::format("{}/product/{}", stores::Aldi.root_url,
+                    item["sku"].get<std::string>()),
+                .id = fmt::format("{}{}", stores::Aldi.prefix,
+                    item["sku"].get<std::string>()),
+                .item_price = Price {
+                    Currency::EUR, item["price"]["amount"].get<unsigned>()
+                },
+                .store = stores::Aldi.id,
+                .timestamp = std::time(nullptr),
+                .full_info = false
             };
-        } else {
-            product.price_per_unit.unit = Unit::Piece;
-            product.price_per_unit.price = product.item_price;
-        }
 
-        results.products.emplace_back(std::move(product),
-            QueryResultInfo { results.products.size() });
-        if (results.products.size() >= depth)
-            break;
+            if (!item["assets"].empty()) {
+                const std::string unescaped_image_url = item["assets"][0]["url"];
+
+                std::string_view product_image_id = unescaped_image_url;
+                constexpr size_t suffix_size = std::string_view("\\/{slug}").size();
+                product_image_id.remove_suffix(suffix_size - 1);
+                size_t image_id_start = product_image_id.rfind('/');
+                product_image_id.remove_prefix(image_id_start + 1);
+
+                product.image_url = fmt::format("{}/{}", BASE_IMAGE_URL,
+                    product_image_id);
+            } else {
+                product.image_url = FALLBACK_IMAGE_URL;
+            }
+
+            // Parsing this string as a PricePU will yield the correct unit, but
+            // not the price. The actual price per unit is in /price/comparison
+
+            if (item["sellingSize"].is_string()
+                && item.contains("/price/comparison"_json_pointer)
+                && item["/price/comparison"_json_pointer].is_number()) {
+                product.price_per_unit
+                    = PricePU::FromString(item["sellingSize"].get<std::string>());
+                product.price_per_unit.price = {
+                    Currency::EUR,
+                    item["price"]["comparison"].get<unsigned>()
+                };
+            } else {
+                product.price_per_unit.unit = Unit::Piece;
+                product.price_per_unit.price = product.item_price;
+            }
+
+            results.products.emplace_back(std::move(product),
+                QueryResultInfo { results.products.size() });
+            if (results.products.size() >= depth)
+                break;
+        } catch (const json::exception& e) {
+            Log(LogLevel::WARNING, "Invalid JSON for item #{} whilst parsing"
+                " ALDI query: {}", current_item, e.what());
+        }
     }
 
     return results;
