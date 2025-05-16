@@ -205,7 +205,8 @@ void from_json(const json& j, enum_selection<E>& es)
 
 }
 
-template<typename E> requires std::is_enum_v<E> && (!tb::detail::enum_selection_disabled<E>)
+template<typename E>
+    requires std::is_enum_v<E> && (!tb::detail::enum_selection_disabled<E>)
 constexpr tb::enum_selection<E> operator|(E a, E b)
 {
     return tb::enum_selection<E>::to_int(a) | tb::enum_selection<E>::to_int(b);
