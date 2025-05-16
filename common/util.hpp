@@ -76,24 +76,6 @@ namespace detail
 {
 
 template<typename T>
-struct get_enum_int;
-
-template<typename T, typename U>
-concept same_size = sizeof(T) == sizeof(U);
-
-template<typename T> requires same_size<T, uint8_t>
-struct get_enum_int<T> { using type = uint8_t; };
-
-template<typename T> requires same_size<T, uint16_t>
-struct get_enum_int<T> { using type = uint16_t; };
-
-template<typename T> requires same_size<T, uint32_t>
-struct get_enum_int<T> { using type = uint32_t; };
-
-template<typename T> requires same_size<T, uint64_t>
-struct get_enum_int<T> { using type = uint64_t; };
-
-template<typename T>
 struct dependent_false : std::false_type {};
 
 template<typename T>
@@ -104,7 +86,7 @@ concept enum_selection_disabled = requires { { disable_enum_selection<T> {} }; }
 template<typename EnumType> requires std::is_enum_v<EnumType>
 struct enum_selection
 {
-    using IntegerType = typename detail::get_enum_int<EnumType>::type;
+    using IntegerType = std::make_unsigned_t<std::underlying_type_t<EnumType>>;
 
     struct iterator
     {
