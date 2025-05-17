@@ -91,7 +91,8 @@ int main()
                 { "terms", terms },
                 { "request-id", 0 },
                 { "stores", stores },
-                { "depth", 10 }
+                { "depth", 10 },
+                { "force-refresh", false }
             },
             .only_first = true,
         }).ignore_error();

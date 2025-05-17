@@ -26,7 +26,8 @@ inline const buxtehude::ValidationSeries QUERY = {
     { "/terms"_json_pointer, IsStringArray },
     { "/request-id"_json_pointer, [] (const json& j) { return j.is_number(); } },
     { "/stores"_json_pointer, [] (const json& j) { return j.is_number(); } },
-    { "/depth"_json_pointer, [] (const json& j) { return j.is_number(); } }
+    { "/depth"_json_pointer, [] (const json& j) { return j.is_number(); } },
+    { "/force-refresh"_json_pointer, buxtehude::predicates::IsBool }
 };
 
 }

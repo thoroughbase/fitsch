@@ -58,7 +58,8 @@ std::future<QueryResultsMap> QueryHandler::SendQuery(std::string_view query)
             { "terms", json::array({ query }) },
             { "request-id", id },
             { "depth", 10 },
-            { "stores", stores }
+            { "stores", stores },
+            { "force-refresh", false }
         },
         .only_first = true
     }).if_err([] (bux::WriteError) {

@@ -110,14 +110,15 @@ static Result TC_DoQuery(TaskContext ctx, App* app, const std::string& query_str
 }
 
 static Result TC_GetQueriesDB(TaskContext ctx, App* app,
-    const std::string& query_string, StoreSelection stores, size_t depth)
+    const std::string& query_string, StoreSelection stores, size_t depth,
+    bool force_refresh)
 {
     ProductList list(depth);
     auto templates = app->database.GetQueryTemplates(tb::make_span({ query_string }));
 
     StoreSelection missing;
 
-    if (templates.empty()) {
+    if (templates.empty() || force_refresh) {
         missing = stores;
     } else {
         const QueryTemplate& query_info = templates[0];
@@ -262,13 +263,14 @@ App::App(AppConfig& cfg_temp) : database(cfg_temp.mongodb_uri),
         int request_id = msg.content["request-id"];
         size_t depth = msg.content["depth"];
         auto stores = msg.content["stores"].get<StoreSelection>();
+        bool force_refresh = msg.content["force-refresh"];
 
         for (const json& j : msg.content["terms"]) {
             auto term = j.get<std::string>();
             delegator.QueueTasks(
                 { SendQuery, this, msg.src, term, stores, request_id },
                 tb::make_span({
-                    Task { TC_GetQueriesDB, this, term, stores, depth }
+                    Task { TC_GetQueriesDB, this, term, stores, depth, force_refresh }
                 })
             );
         }
