@@ -8,6 +8,7 @@ namespace validate
 {
 
 using nlohmann::json;
+namespace bux = buxtehude;
 
 constexpr auto IsStringArray = [] (const json& j) -> bool {
     if (!j.is_array()) return false;
@@ -17,16 +18,16 @@ constexpr auto IsStringArray = [] (const json& j) -> bool {
 };
 
 inline const buxtehude::ValidationSeries QUERY_RESULT = {
-    { "/term"_json_pointer, buxtehude::predicates::NotEmpty },
-    { "/items"_json_pointer, [] (const json& j) { return j.is_array(); } },
-    { "/request-id"_json_pointer, [] (const json& j) { return j.is_number(); } }
+    { "/term"_json_pointer, bux::predicates::NotEmpty },
+    { "/items"_json_pointer, bux::predicates::IsArray },
+    { "/request-id"_json_pointer, bux::predicates::IsNumber }
 };
 
 inline const buxtehude::ValidationSeries QUERY = {
     { "/terms"_json_pointer, IsStringArray },
-    { "/request-id"_json_pointer, [] (const json& j) { return j.is_number(); } },
-    { "/stores"_json_pointer, [] (const json& j) { return j.is_number(); } },
-    { "/depth"_json_pointer, [] (const json& j) { return j.is_number(); } },
+    { "/request-id"_json_pointer, bux::predicates::IsNumber },
+    { "/stores"_json_pointer, bux::predicates::IsNumber },
+    { "/depth"_json_pointer, bux::predicates::IsNumber },
     { "/force-refresh"_json_pointer, buxtehude::predicates::IsBool }
 };
 
