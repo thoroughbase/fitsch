@@ -98,6 +98,12 @@ body h3 {
     margin: 0;
     margin-right: 10px;
     text-wrap: balance;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    max-height: 3em;
     font-weight: 650;
 }
 
@@ -276,7 +282,7 @@ body h3 {
     visibility: hidden;
     opacity: 0;
     position: absolute;
-    left: 20;
+    left: 0;
     text-align: center;
     background-color: #335;
     color: white;
