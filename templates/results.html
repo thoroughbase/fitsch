@@ -46,20 +46,37 @@
 {{#item_listings}}
 <div class="item-listing" store-id="{{store}}">
 <div class="item-info">
-    <p class="item-name"><b>{{ name }}</b></p>
-    <p class="item-price"><b>{{ price }}</b> | {{ ppu }}</p>
+    <div class="item-text">
+        <p class="item-name">{{ name }}</p>
+        <p class="item-price"><b>{{ price }}</b> | {{ ppu }}</p>
+    </div>
     <div class="product-buttons">
-        <input type="image"
-               class="product-button product-page-button"
-               onclick="window.open('{{ url }}')"
-               src="{{ logo_url }}">
-        </input>
-        <button class="product-button product-bookmark-button">
-            <i class="fa-solid fa-bookmark fa"></i>
-        </button>
-        <button class="product-button product-report-button">
-            <i class="fa-solid fa-flag"></i>
-        </button>
+        <div class="tooltip-container-div">
+            <input type="image"
+                   class="product-button product-page-button"
+                   onclick="window.open('{{ url }}')"
+                   src="{{ logo_url }}">
+            </input>
+            <div class="tooltip">
+                See on website
+            </div>
+        </div>
+        <div class="tooltip-container-div">
+            <button class="product-button product-bookmark-button">
+                <i class="fa-solid fa-bookmark fa"></i>
+            </button>
+            <div class="tooltip">
+                Save
+            </div>
+        </div>
+        <div class="tooltip-container-div">
+            <button class="product-button product-report-button">
+                <i class="fa-solid fa-flag"></i>
+            </button>
+            <div class="tooltip">
+                Report
+            </div>
+        </div>
     </div>
 </div>
 <div class="item-image-div">

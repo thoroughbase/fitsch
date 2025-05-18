@@ -10,6 +10,7 @@ const original_listings
     = (listings_element === null) ? [] : [...listings_element.children];
 const item_count = document.getElementById("item-count");
 const overlay = document.getElementById("overlay");
+const tooltips = document.getElementsByClassName("tooltip");
 
 search_bar.addEventListener("keyup", (event) => {
     if (event.key !== "Enter") return;
@@ -39,6 +40,14 @@ search_bar.addEventListener("focus", (event) => {
 });
 
 update_header();
+center_tooltips();
+
+function center_tooltips()
+{
+    for (tooltip of tooltips) {
+        tooltip.style.left = "-" + (tooltip.offsetWidth / 2 - 11) + "px";
+    }
+}
 
 function filter_products_by_store(stores)
 {

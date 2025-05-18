@@ -1,6 +1,6 @@
 body {
     margin: 0;
-    background-color: #ddddff;
+    background-color: #cacaff;
     font-family: "Lato", serif;
 }
 
@@ -15,7 +15,7 @@ body h3 {
     font-size: 40px;
     color: #ffffff;
     height: 56px;
-    background-color: #5555aa;
+    background-color: #5050aa;
     border: 0px;
     border-bottom: 1px;
     border-color: #000;
@@ -53,7 +53,7 @@ body h3 {
 
 .listings {
     display: grid;
-    gap: 12px 5vw;
+    gap: 14px 2vw;
     grid-auto-rows: 100px;
     @media screen and (min-width: 200px) {
         grid-template-columns: repeat(1, 1fr);
@@ -72,18 +72,18 @@ body h3 {
     };
     margin-left: 0%;
     margin-right: 0%;
-    padding-top: 1%;
-    padding-bottom: 1%;
-    border: 0px;
-    border-style: solid;
-    background-color: #eeeeff
+    background-color: transparent;
 }
 
 .item-listing .item-info {
     display: flex;
     flex-direction: column;
     height: 100%;
-    padding: 4px;
+    padding-left: 10px;
+}
+
+.item-listing .item-text {
+    padding-top: 6px;
 }
 
 .item-listing .product-image {
@@ -98,18 +98,13 @@ body h3 {
     margin: 0;
     margin-right: 10px;
     text-wrap: balance;
+    font-weight: 650;
 }
 
 .item-listing p.item-price {
-    font-size: 11px;
+    font-size: 12px;
     margin: 0;
-    font-weight: 300;
-}
-
-.item-listing p.item-price.b {
-    font-size: 10px;
-    margin: 0;
-    font-weight: 300;
+    font-weight: 350;
 }
 
 .item-listing .product-image {
@@ -117,7 +112,30 @@ body h3 {
     height: 100px;
 }
 
+.item-listing {
+    background-color: #ececff;
+    transition: 0.2s;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    border-radius: 6px;
+    border-style: none;
+    border: 0.5px;
+    border-color: #66f;
+    padding-bottom: 2px;
+    box-shadow: 0px 2px 4px #669;
+}
+
+.item-listing:hover {
+    background-color: #ddf;
+    border-style: solid;
+    box-shadow: 0px 2px 2px #669;
+    transition: 0.2s;
+}
+
 .product-buttons {
+    position: relative;
+    bottom: 4px;
     margin-top: auto;
     display: flex;
     padding: 0;
@@ -137,7 +155,7 @@ body h3 {
 .product-page-button {
     border: 1px solid;
     border-radius: 3px;
-    border-color: #ddf;
+    border-color: #bbd;
 }
 
 .product-button .fa-solid {
@@ -149,22 +167,8 @@ body h3 {
     color: #55b;
 }
 
-.item-listing {
-    background-color: #eeeeff;
-    transition: 0.2s;
-    display: flex;
-    width: 100%;
-    height: 100%;
-    padding-bottom: 3px;
-}
-
 .item-image-div {
     margin-left: auto;
-}
-
-.item-listing:hover {
-    background-color: #e5e5ff;
-    transition: 0.2s;
 }
 
 #search-field {
@@ -265,4 +269,33 @@ body h3 {
     font-weight: 300;
     font-size: 16px;
     text-align: center;
+}
+
+.tooltip {
+    transition: 0.3s;
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    left: 20;
+    text-align: center;
+    background-color: #335;
+    color: white;
+    border-radius: 6px;
+    margin-top: 4px;
+    padding: 4px 10px 4px 10px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.tooltip-container-div:hover
+.tooltip {
+    visibility: visible;
+    opacity: 1;
+    transition: 0.3s;
+}
+
+.tooltip-container-div {
+    position: relative;
+    width: 22px;
+    height: 22px;
 }
