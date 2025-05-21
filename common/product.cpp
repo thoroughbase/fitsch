@@ -152,7 +152,7 @@ std::string PricePU::ToString() const
     return price.ToString().append(suffix.begin(), suffix.end());
 }
 
-PricePU PricePU::FromString(std::string_view str)
+std::optional<PricePU> PricePU::FromString(std::string_view str)
 {
     if (str.empty()) return {};
 
@@ -166,7 +166,7 @@ PricePU PricePU::FromString(std::string_view str)
 
     if (separator == PRICE_UNIT_SEPARATORS.end()) {
         Log(LogLevel::WARNING, "Unrecognised delimiter/unit for '{}'!", str);
-        return {};
+        return std::nullopt;
     }
 
     separator_index += separator->size() - 1;
@@ -180,14 +180,14 @@ PricePU PricePU::FromString(std::string_view str)
     if (!UNIT_CONVERSIONS.contains(lowercase_unit)) {
         Log(LogLevel::WARNING, "Unrecognised unit for '{}'!", str);
         Log(LogLevel::WARNING, "Offending unit: {}", unit_view);
-        return {};
+        return std::nullopt;
     }
 
     auto [unit_type, factor] = UNIT_CONVERSIONS.at(lowercase_unit);
     std::optional<Price> price = Price::FromString(price_view);
-    if (!price) return {};
+    if (!price) return std::nullopt;
 
-    return { price.value() * factor, unit_type };
+    return PricePU { price.value() * factor, unit_type };
 }
 
 std::partial_ordering PricePU::operator<=>(const PricePU& other) const

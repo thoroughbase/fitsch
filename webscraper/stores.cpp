@@ -46,7 +46,11 @@ std::optional<Product> SVLike_GetProductAtURL(const Store& store, const HTML& ht
         result.price_per_unit.price = result.item_price;
     } else {
         Element e = priceper[0];
-        result.price_per_unit = PricePU::FromString(e.FirstChild().Text());
+        result.price_per_unit
+            = PricePU::FromString(e.FirstChild().Text()).value_or(PricePU {
+            .price = result.item_price,
+            .unit = Unit::Piece
+        });
     }
 
     return result;
@@ -147,7 +151,11 @@ ProductList SVLike_ParseProductSearch(const Store& store, std::string_view data,
 
         if (price_per_c.size()) {
             product.price_per_unit
-                = PricePU::FromString(price_per_c[0].FirstChild().Text());
+                = PricePU::FromString(price_per_c[0].FirstChild().Text())
+                  .value_or(PricePU {
+                .price = product.item_price,
+                .unit = Unit::Piece
+            });
         }
 
         if (product.price_per_unit.unit == Unit::None) {
@@ -263,7 +271,10 @@ ProductList TE_ParseProductSearch(std::string_view data, size_t depth)
             .url = fmt::format("{}{}", stores::Tesco.root_url, relative_url),
             .id = fmt::format("{}{}", stores::Tesco.prefix, id),
             .item_price = price.value(),
-            .price_per_unit = PricePU::FromString(ppu_view),
+            .price_per_unit = PricePU::FromString(ppu_view).value_or(PricePU {
+                .price = price.value(),
+                .unit = Unit::Piece
+            }),
             .store = stores::Tesco.id,
             .timestamp = time(NULL),
             .full_info = false,
@@ -350,7 +361,10 @@ std::optional<Product> TE_GetProductAtURL(const HTML& html)
         if (end_substr != std::string::npos)
             ppu_view.remove_suffix(ppu_view.size() - end_substr);
 
-        result.price_per_unit = PricePU::FromString(ppu_view);
+        result.price_per_unit = PricePU::FromString(ppu_view).value_or(PricePU {
+            .price = result.item_price,
+            .unit = Unit::Piece
+        });
     }
 
     return result;
@@ -423,7 +437,11 @@ ProductList AL_ParseProductSearch(std::string_view data, size_t depth)
                 && item.contains("/price/comparison"_json_pointer)
                 && item["/price/comparison"_json_pointer].is_number()) {
                 product.price_per_unit
-                    = PricePU::FromString(item["sellingSize"].get<std::string>());
+                    = PricePU::FromString(item["sellingSize"].get<std::string>())
+                      .value_or(PricePU {
+                    .price = product.item_price,
+                    .unit = Unit::Piece
+                });
                 product.price_per_unit.price = {
                     Currency::EUR,
                     item["price"]["comparison"].get<unsigned>()

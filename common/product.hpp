@@ -51,7 +51,7 @@ void from_json(const json& j, Price& p);
 struct PricePU
 {
     std::string ToString() const;
-    static PricePU FromString(std::string_view str);
+    static std::optional<PricePU> FromString(std::string_view str);
 
     std::partial_ordering operator<=>(const PricePU& other) const;
 
