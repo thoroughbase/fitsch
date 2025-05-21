@@ -35,7 +35,7 @@ enum class Currency { EUR };
 struct Price
 {
     std::string ToString() const;
-    static Price FromString(std::string str);
+    static std::optional<Price> FromString(std::string_view str);
 
     std::partial_ordering operator<=>(const Price& other) const;
     Price operator*(float b) const;

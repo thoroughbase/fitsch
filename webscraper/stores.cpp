@@ -32,7 +32,10 @@ std::optional<Product> SVLike_GetProductAtURL(const Store& store, const HTML& ht
             result.url = fmt::format("{}/product/{}", store.homepage,
                                      content);
         } else if (property == "price") {
-            result.item_price = Price::FromString(std::string { content });
+            std::optional<Price> price = Price::FromString(content);
+            if (!price)
+                return std::nullopt;
+            result.item_price = price.value();
         }
     }
 
@@ -118,6 +121,15 @@ ProductList SVLike_ParseProductSearch(const Store& store, std::string_view data,
             continue;
         }
 
+        std::optional<Price> price = Price::FromString(price_c[0].FirstChild().Text());
+        if (!price) {
+            Log(LogLevel::WARNING,
+                "Couldn't parse price string for product #{} (Store: {})\n"
+                "  string: {}",
+                results.products.size(), store.name, price_c[0].FirstChild().Text());
+            continue;
+        }
+
         std::string_view str_id = name_c[0].GetAttrValue("data-testid");
         str_id.remove_suffix(str_id.size() - str_id.find('-'));
 
@@ -126,8 +138,7 @@ ProductList SVLike_ParseProductSearch(const Store& store, std::string_view data,
             .image_url { image_c[0].GetAttrValue("src") },
             .url { url_c[0].GetAttrValue("href") },
             .id = fmt::format("{}{}", store.prefix, str_id),
-            .item_price =
-                Price::FromString(std::string { price_c[0].FirstChild().Text() }),
+            .item_price = price.value(),
             .store = store.id,
             .price_per_unit = {},
             .timestamp = std::time(nullptr),
@@ -236,13 +247,22 @@ ProductList TE_ParseProductSearch(std::string_view data, size_t depth)
         if (end_substr != std::string::npos)
             ppu_view.remove_suffix(ppu_view.size() - end_substr);
 
+        std::optional<Price> price = Price::FromString(price_c[0].FirstChild().Text());
+        if (!price) {
+            Log(LogLevel::WARNING,
+                "Couldn't parse price string for product #{} (Store: {})\n"
+                "  string: {}",
+                results.products.size(), stores::Tesco.name,
+                price_c[0].FirstChild().Text());
+            continue;
+        }
+
         Product product = {
             .name { name_c[0].FirstChild().Text() },
             .image_url { srcset },
             .url = fmt::format("{}{}", stores::Tesco.root_url, relative_url),
             .id = fmt::format("{}{}", stores::Tesco.prefix, id),
-            .item_price =
-                Price::FromString(std::string { price_c[0].FirstChild().Text() }),
+            .item_price = price.value(),
             .price_per_unit = PricePU::FromString(ppu_view),
             .store = stores::Tesco.id,
             .timestamp = time(NULL),

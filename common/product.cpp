@@ -68,33 +68,58 @@ std::string Price::ToString() const
     return result;
 }
 
-Price Price::FromString(std::string str)
+template<>
+std::optional<tb::match_result<Price>> tb::try_match_single(std::string_view view)
 {
-    if (size_t comma = str.find(','); comma != std::string::npos)
+    std::string str(view);
+
+    size_t characters_consumed = 0;
+    if (size_t comma = str.find(','); comma != std::string::npos) {
         str.erase(comma, 1);
+        ++characters_consumed;
+    }
 
     Price price;
-    for (auto& [currency, symbol] : CURRENCY_SYMBOLS) {
+    for (const auto& [currency, symbol] : CURRENCY_SYMBOLS) {
         if (size_t currency_pos = str.find(symbol); currency_pos != std::string::npos) {
             price.currency = currency;
             str.erase(currency_pos, symbol.size());
+            characters_consumed += symbol.size();
             break;
         }
     }
 
-    std::string_view view(str);
+    view = str;
     size_t ss_point = view.find('.');
+    if (ss_point != std::string::npos) {
+        auto parts = tb::try_match<unsigned, unsigned>(view, "{}.{}");
+        if (!parts)
+            return std::nullopt;
 
-    try {
-        price.value = std::stoi(view.substr(0, ss_point).data()) * 100;
-        if (ss_point != std::string::npos)
-            price.value += std::stoi(view.substr(ss_point + 1).data());
-    } catch (const std::logic_error& e) {
-        Log(LogLevel::WARNING, "Error converting string {} to Price: {}", str, e.what());
-        return {};
+        auto [int_part, frac_part] = parts.value().object;
+        price.value = (int_part * 100) + frac_part;
+        characters_consumed += parts.value().characters_matched;
+    } else {
+        auto int_part = tb::try_match_single<unsigned>(view.substr(0, ss_point));
+        if (!int_part)
+            return std::nullopt;
+        price.value = int_part.value().object * 100;
+        characters_consumed += int_part.value().characters_matched;
     }
 
-    return price;
+    return tb::match_result<Price> {
+        .object = price,
+        .characters_matched = characters_consumed
+    };
+}
+
+std::optional<Price> Price::FromString(std::string_view str)
+{
+    auto price = tb::try_match_single<Price>(str);
+    if (!price)
+        return std::nullopt;
+
+    return price.value().object;
 }
 
 std::partial_ordering Price::operator<=>(const Price& other) const
@@ -159,7 +184,10 @@ PricePU PricePU::FromString(std::string_view str)
     }
 
     auto [unit_type, factor] = UNIT_CONVERSIONS.at(lowercase_unit);
-    return { Price::FromString(std::string { price_view }) * factor, unit_type };
+    std::optional<Price> price = Price::FromString(price_view);
+    if (!price) return {};
+
+    return { price.value() * factor, unit_type };
 }
 
 std::partial_ordering PricePU::operator<=>(const PricePU& other) const
