@@ -281,6 +281,24 @@ constexpr std::optional<match_result<T>> try_match_single(std::string_view s)
     return result;
 }
 
+template<typename T> requires std::floating_point<T>
+constexpr std::optional<match_result<T>> try_match_single(std::string_view s)
+{
+    const char* end = s.data();
+    match_result<T> result {
+        .object = static_cast<T>(
+            std::strtod(s.data(), const_cast<char**>(&end))
+        ),
+        .characters_matched = static_cast<size_t>(end - s.data())
+    };
+    if (errno == ERANGE || result.object > std::numeric_limits<T>::max()
+        || result.object < std::numeric_limits<T>::min()
+        || result.characters_matched < 1)
+        return std::nullopt;
+
+    return result;
+}
+
 template<typename... Ts>
 constexpr auto try_match(std::string_view string,
     typename detail::match_string<Ts...>::identity _match)
