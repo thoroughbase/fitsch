@@ -300,7 +300,7 @@ constexpr auto try_match(std::string_view string,
         match.remove_prefix(placeholder_index);
         string.remove_prefix(placeholder_index);
 
-        if (match.empty()) break;
+        if (placeholder_index == std::string::npos) break;
 
         bool okay = false;
         visit_tuple(result, current_placeholder, [&] (auto& elem) {
