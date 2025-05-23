@@ -65,6 +65,31 @@ void from_json(const json& j, PricePU& p);
 
 using StoreSelection = tb::enum_selection<StoreID>;
 
+enum class OfferType
+{
+    MULTIPLE_FOR_REDUCED_PRICE, // "x for €Y"
+    MULTIPLE_HETEROGENEOUS_FOR_REDUCED_PRICE, // "Any x for €Y of ..."
+    REDUCED_PRICE_ABSOLUTE, // "Only €Y"
+    REDUCED_PRICE_PERCENTAGE,
+    REDUCED_PRICE_DEDUCTION,
+    GREAT_VALUE,
+    BUNDLE_OFFER,
+    MEMBERSHIP_DEAL_ONLY
+};
+
+struct Offer
+{
+    std::string text;
+    Price price;
+    size_t bulk_amount = 0;
+    std::time_t expiry;
+    OfferType type;
+    bool membership_only = false;
+    float price_reduction_multiplier = 1;
+
+    static std::optional<Offer> FromString(std::string_view text);
+};
+
 struct Product
 {
     std::string name, description, image_url, url, id;

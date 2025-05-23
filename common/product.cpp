@@ -207,6 +207,74 @@ void from_json(const json& j, PricePU& p)
     p.price = j[1];
 }
 
+// Offer
+
+std::optional<Offer> Offer::FromString(std::string_view view)
+{
+    auto text = view | std::views::transform(tolower) | tb::range_to<std::string>();
+    if (auto x_for_y = tb::try_match<unsigned, Price>(text, "{} for {}")) {
+        auto [count, price] = x_for_y->object;
+        return Offer {
+            .text { text },
+            .price = price,
+            .bulk_amount = count,
+            .type = OfferType::MULTIPLE_FOR_REDUCED_PRICE,
+        };
+    } else if (auto x_for_y = tb::try_match<unsigned, Price>(text, "buy {} for {}")) {
+        auto [count, price] = x_for_y->object;
+        return Offer {
+            .text { text },
+            .price = price,
+            .bulk_amount = count,
+            .type = OfferType::MULTIPLE_FOR_REDUCED_PRICE,
+        };
+    } else if (auto any = tb::try_match<unsigned, Price>(text, "any {} for {}")) {
+        auto [count, price] = x_for_y->object;
+        return Offer {
+            .text { text },
+            .price = price,
+            .bulk_amount = count,
+            .type = OfferType::MULTIPLE_HETEROGENEOUS_FOR_REDUCED_PRICE,
+        };
+    } else if (auto reduced = tb::try_match<Price>(text, "only {}")) {
+        return Offer {
+            .text { text },
+            .price = std::get<Price>(reduced->object),
+            .bulk_amount = 1,
+            .type = OfferType::REDUCED_PRICE_ABSOLUTE
+        };
+    } else if (auto tesco_clubcard = tb::try_match<Price>(text, "{} clubcard price")) {
+        return Offer {
+            .text { text },
+            .price = std::get<Price>(tesco_clubcard->object),
+            .bulk_amount = 1,
+            .type = OfferType::REDUCED_PRICE_ABSOLUTE,
+            .membership_only = true
+        };
+    } else if (auto save_pc = tb::try_match<float>(text, "save {}%")) {
+        return Offer {
+            .text { text },
+            .type = OfferType::REDUCED_PRICE_PERCENTAGE,
+            .price_reduction_multiplier = 1 - (std::get<float>(save_pc->object) * .01f)
+        };
+    } else if (auto save_amnt = tb::try_match<Price>(text, "save {}")) {
+        return Offer {
+            .text { text },
+            .price = std::get<Price>(save_amnt->object),
+            .bulk_amount = 1,
+            .type = OfferType::REDUCED_PRICE_DEDUCTION
+        };
+    } else if (text.starts_with("half price")) {
+        return Offer {
+            .text { text },
+            .type = OfferType::REDUCED_PRICE_PERCENTAGE,
+            .price_reduction_multiplier = 0.5f
+        };
+    }
+
+    return std::nullopt;
+}
+
 // ProductList
 
 ProductList::ProductList(size_t depth) : depth(depth) {}
