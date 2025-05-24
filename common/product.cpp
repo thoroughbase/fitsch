@@ -20,7 +20,13 @@ static_assert(tb::is_sorted(PRICE_UNIT_SEPARATORS, [] (auto& a, auto& b) {
     return a.size() >= b.size();
 }), "Price unit separators array must be sorted from longest to shortest");
 
-const std::unordered_map<Currency, std::string_view> CURRENCY_SYMBOLS = {
+const std::unordered_map<std::string_view, std::pair<Currency, float>>
+CURRENCY_MULTIPLIERS = {
+    { "€", { Currency::EUR, 1 } },
+    { "c", { Currency::EUR, 0.01 } }
+};
+
+const std::unordered_map<Currency, std::string_view> CURRENCY_SYMBOLS {
     { Currency::EUR, "€" }
 };
 
@@ -80,9 +86,11 @@ std::optional<tb::match_result<Price>> tb::try_match_single(std::string_view vie
     }
 
     Price price;
-    for (const auto& [currency, symbol] : CURRENCY_SYMBOLS) {
+    float price_multiplier = 1;
+    for (const auto& [symbol, curr_multiplier] : CURRENCY_MULTIPLIERS) {
         if (size_t currency_pos = str.find(symbol); currency_pos != std::string::npos) {
-            price.currency = currency;
+            price.currency = std::get<Currency>(curr_multiplier);
+            price_multiplier = std::get<float>(curr_multiplier);
             str.erase(currency_pos, symbol.size());
             characters_consumed += symbol.size();
             break;
@@ -96,19 +104,19 @@ std::optional<tb::match_result<Price>> tb::try_match_single(std::string_view vie
         if (!parts)
             return std::nullopt;
 
-        auto [int_part, frac_part] = parts.value().object;
+        auto [int_part, frac_part] = parts->object;
         price.value = (int_part * 100) + frac_part;
-        characters_consumed += parts.value().characters_matched;
+        characters_consumed += parts->characters_matched;
     } else {
         auto int_part = tb::try_match_single<unsigned>(view.substr(0, ss_point));
         if (!int_part)
             return std::nullopt;
-        price.value = int_part.value().object * 100;
-        characters_consumed += int_part.value().characters_matched;
+        price.value = int_part->object * 100;
+        characters_consumed += int_part->characters_matched;
     }
 
     return tb::match_result<Price> {
-        .object = price,
+        .object = price * price_multiplier,
         .characters_matched = characters_consumed
     };
 }
@@ -241,7 +249,8 @@ std::optional<Offer> Offer::FromString(std::string_view view)
             .text { text },
             .price = std::get<Price>(reduced->object),
             .bulk_amount = 1,
-            .type = OfferType::REDUCED_PRICE_ABSOLUTE
+            .type = OfferType::REDUCED_PRICE_ABSOLUTE,
+            .membership_only = text.find("real rewards") != std::string::npos
         };
     } else if (auto tesco_clubcard = tb::try_match<Price>(text, "{} clubcard price")) {
         return Offer {

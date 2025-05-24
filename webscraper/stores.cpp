@@ -137,11 +137,32 @@ ProductList SVLike_ParseProductSearch(const Store& store, std::string_view data,
         std::string_view str_id = name_c[0].GetAttrValue("data-testid");
         str_id.remove_suffix(str_id.size() - str_id.find('-'));
 
+        Collection<Element> offers_html;
+
+        if (store.id == StoreID::SUPERVALU) {
+            html.SearchAttr(offers_html, "data-testid",
+                "promotionBadgeComponent", e, true);
+        } else {
+            Collection<Element> card_charges
+                = html.SearchAttr("data-testid", "cardCharges", e, true);
+            if (card_charges.size())
+                html.SearchClass(offers_html, "PromotionLabelBadge",
+                    card_charges[0], true);
+        }
+
+        std::vector<Offer> offers_vec;
+        offers_vec.reserve(offers_html.size());
+        for (Element offer : offers_html) {
+            if (std::optional<Offer> opt = Offer::FromString(offer.FirstChild().Text()))
+                offers_vec.emplace_back(std::move(opt.value()));
+        }
+
         Product product {
             .name { name_text_node.Text() },
             .image_url { image_c[0].GetAttrValue("src") },
             .url { url_c[0].GetAttrValue("href") },
             .id = fmt::format("{}{}", store.prefix, str_id),
+            .offers = std::move(offers_vec),
             .item_price = price.value(),
             .store = store.id,
             .price_per_unit = {},

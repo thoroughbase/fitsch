@@ -89,10 +89,13 @@ struct Offer
 
     static std::optional<Offer> FromString(std::string_view text);
 };
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Offer, text, price, bulk_amount, expiry, type,
+    membership_only, price_reduction_multiplier);
 
 struct Product
 {
     std::string name, description, image_url, url, id;
+    std::vector<Offer> offers;
     Price item_price;
     PricePU price_per_unit; // Price per KG, L, etc.
     StoreID store;
@@ -100,8 +103,8 @@ struct Product
 
     bool full_info;
 };
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Product, name, description, image_url, url, id,
-    item_price, price_per_unit, store, timestamp, full_info);
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Product, name, offers, description, image_url, url,
+    id, item_price, price_per_unit, store, timestamp, full_info);
 
 struct QueryResultInfo
 {
