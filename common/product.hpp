@@ -88,6 +88,7 @@ struct Offer
     float price_reduction_multiplier = 1;
 
     static std::optional<Offer> FromString(std::string_view text);
+    std::string ToString() const;
 };
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Offer, text, price, bulk_amount, expiry, type,
     membership_only, price_reduction_multiplier);
