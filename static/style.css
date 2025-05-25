@@ -173,6 +173,16 @@ body h3 {
     color: #55b;
 }
 
+.product-offers-button .fa-solid {
+    color: #5a5;
+    transition: color 0.2s;
+}
+
+.product-offers-button .fa-solid:hover {
+    color: #5c5;
+    transition: color 0.2s;
+}
+
 .item-image-div {
     margin-left: auto;
 }

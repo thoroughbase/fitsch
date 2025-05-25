@@ -136,7 +136,13 @@ int main()
                 { "ppu", crow::json::wvalue(p.price_per_unit.ToString()) },
                 { "url", crow::json::wvalue(std::move(p.url)) },
                 { "logo_url", crow::json::wvalue(GetStoreLogo(p.store).data()) },
-                { "store", crow::json::wvalue(GetStoreName(p.store).data()) }
+                { "store", crow::json::wvalue(GetStoreName(p.store).data()) },
+                { "has_offers", crow::json::wvalue(p.offers.size() > 0) },
+                { "offers", crow::json::wvalue(
+                    p.offers | std::views::transform([] (const Offer& o) {
+                        return o.ToString();
+                    }) | tb::range_to<std::vector<crow::json::wvalue>>()
+                ) }
             });
         }
 
