@@ -294,9 +294,9 @@ std::string Offer::ToString() const
 	case OfferType::REDUCED_PRICE_ABSOLUTE:
 		return fmt::format("On sale: {}", price.ToString());
 	case OfferType::REDUCED_PRICE_DEDUCTION:
-		return fmt::format("On sale: Save {}", price.ToString());
+		return fmt::format("On sale: {} off", price.ToString());
 	case OfferType::REDUCED_PRICE_PERCENTAGE:
-		return fmt::format("On sale: Save {:.1f}%",
+		return fmt::format("On sale: {:.1f}% off",
 			price_reduction_multiplier * 100);
 	default:
 		std::string uppercase = text;
