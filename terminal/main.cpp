@@ -5,6 +5,8 @@
 #include <buxtehude/buxtehude.hpp>
 #include <buxtehude/validate.hpp>
 
+#include <dflat/dflat.hpp>
+
 #include <nlohmann/json.hpp>
 #include <fmt/core.h>
 
@@ -62,6 +64,13 @@ int main()
         .teamname = "terminal"
     });
 
+    bux::Client bux_database({
+        .teamname = "dflat"
+    });
+
+    dflat::Database database(bux_database, "dflat");
+    dflat::Handle db_handle(terminal, "dflat");
+
     terminal.AddHandler("query-result", [] (bux::Client& cl, const bux::Message& m) {
         if (!bux::ValidateJSON(m.content, validate::QUERY_RESULT)) return;
         fmt::print("Query results ({}):\n", m.content["term"].get<std::string>());
@@ -73,6 +82,10 @@ int main()
     });
 
     terminal.InternalConnect(server).ignore_error();
+    bux_database.InternalConnect(server).ignore_error();
+
+    db_handle.Create("products", false, 2000).ignore_error();
+    db_handle.Create("queries", false, 200).ignore_error();
 
     std::string input;
 

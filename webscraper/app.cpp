@@ -18,6 +18,17 @@
 
 #include <chrono>
 
+constexpr std::string_view PRODUCTS_DATABASE = "products";
+constexpr std::string_view QUERIES_DATABASE = "queries";
+
+constexpr auto DATABASE_UPLOAD_FAILED = [] (dflat::DatabaseError) {
+    Log(LogLevel::WARNING, "Failed to upload to database!");
+};
+
+constexpr auto DATABASE_GET_FAILED = [] (dflat::DatabaseError) {
+    Log(LogLevel::WARNING, "Failed to get documents from database!");
+};
+
 // ResultCallbacks
 
 static void PrintProduct(const std::vector<Result>& results, App* app,
@@ -38,7 +49,8 @@ static void PrintProduct(const std::vector<Result>& results, App* app,
     fmt::print("Product at URL `{}`:\n  {}: {} [{}]\n", url, product.name,
                product.item_price.ToString(), product.price_per_unit.ToString());
 
-    app->database.PutProducts(tb::make_span({ product }));
+    app->db_handle.Put(PRODUCTS_DATABASE, product.id, product, true)
+        .if_err(DATABASE_UPLOAD_FAILED);
 }
 
 static void SendQuery(const std::vector<Result>& results, App* app,
@@ -71,10 +83,20 @@ static void SendQuery(const std::vector<Result>& results, App* app,
 
     if (upload) {
         Log(LogLevel::DEBUG, "Uploading query {}", query_string);
-        app->database.PutQueryTemplates(tb::make_span({
-            list.AsQueryTemplate(query_string, stores)
-        }));
-        if (!list.products.empty()) app->database.PutProducts(products);
+        app->db_handle.Put(QUERIES_DATABASE, query_string,
+            list.AsQueryTemplate(query_string, stores), true)
+            .if_err(DATABASE_UPLOAD_FAILED);
+
+        if (!list.products.empty()) {
+            auto product_pairs = products
+            | std::views::transform([] (const Product& p)
+                -> std::tuple<const std::string&, const Product&> {
+                return { p.id, p };
+            });
+
+            app->db_handle.PutMany<Product>(PRODUCTS_DATABASE, product_pairs, true)
+                .if_err(DATABASE_UPLOAD_FAILED);
+        }
     }
 }
 
@@ -114,35 +136,37 @@ static Result TC_GetQueriesDB(TaskContext ctx, App* app,
     bool force_refresh)
 {
     ProductList list(depth);
-    auto templates = app->database.GetQueryTemplates(tb::make_span({ query_string }));
+    StoreSelection missing = stores;
 
-    StoreSelection missing;
-
-    if (templates.empty() || force_refresh) {
-        missing = stores;
-    } else {
-        const QueryTemplate& query_info = templates[0];
-        std::time_t now = std::time(nullptr);
-        if (query_info.depth < depth
-            || now - query_info.timestamp > app->config.entry_expiry_time_seconds) {
-            missing = stores;
-        } else {
-            if (!query_info.stores.has(stores)) {
-                missing = stores.without(query_info.stores);
+    if (!force_refresh) {
+        app->db_handle.Get<QueryTemplate>(QUERIES_DATABASE, query_string)
+        .if_err([] (dflat::DatabaseError e) {
+            if (e != dflat::DatabaseError::KEY_NOT_FOUND)
+                DATABASE_GET_FAILED(e);
+        }).if_ok([&] (const QueryTemplate& query_info) {
+            std::time_t time_elapsed = std::time(nullptr) - query_info.timestamp;
+            if (query_info.depth < depth
+                || time_elapsed > app->config.entry_expiry_time_seconds) {
+                return;
             }
+
+            missing = stores.without(query_info.stores);
 
             auto relevant_ids = std::views::keys(
                 query_info.results | std::views::filter([depth] (auto& pair) {
                     auto& [id, info] = pair;
                     return info.relevance < depth;
                 })
-            ) | tb::range_to<std::vector<std::string>>();
-            auto products = app->database.GetProducts(relevant_ids);
+            ) | tb::range_to<std::vector<std::string_view>>();
 
-            for (Product& product : products)
-                list.products.emplace_back(std::move(product),
-                    query_info.results.at(product.id));
-        }
+            app->db_handle.GetMany<Product>(PRODUCTS_DATABASE, relevant_ids)
+            .if_ok_mut([&] (std::unordered_map<std::string, Product>& results) {
+                for (auto& [id, product] : results)
+                    list.products.emplace_back(std::move(product),
+                        query_info.results.at(id));
+            })
+            .if_err(DATABASE_GET_FAILED);
+        });
     }
 
     if (missing) {
@@ -178,17 +202,11 @@ std::optional<AppConfig> AppConfig::FromJSONFile(std::string_view path)
         return {};
     }
 
-    if (!cfg_json.contains("/mongodb-uri"_json_pointer)) {
-        Log(LogLevel::WARNING, "No MongoDB URI found in config");
-        return {};
-    } else {
-        cfg_json["mongodb-uri"].get_to(result.mongodb_uri);
+    if (cfg_json.contains("/dflat-db-name"_json_pointer)) {
+        cfg_json["dflat-db-name"].get_to(result.dflat_db_name);
     }
 
-    if (!cfg_json.contains("/curl/user-agent"_json_pointer)) {
-        Log(LogLevel::WARNING, "No CURL user agent found in config");
-        return {};
-    } else {
+    if (cfg_json.contains("/curl/user-agent"_json_pointer)) {
         cfg_json["curl"]["user-agent"].get_to(result.curl_useragent);
     }
 
@@ -242,8 +260,7 @@ void App::RetryConnection()
 
 // App
 
-App::App(AppConfig& cfg_temp) : database(cfg_temp.mongodb_uri),
-    config(std::move(cfg_temp))
+App::App(AppConfig& cfg_temp) : config(std::move(cfg_temp))
 {
     CURLDriver::GlobalInit();
     bux::Initialise([] (bux::LogLevel level, std::string_view msg) {
@@ -252,6 +269,8 @@ App::App(AppConfig& cfg_temp) : database(cfg_temp.mongodb_uri),
     });
 
     curl_driver.Init(32, config.curl_useragent);
+
+    db_handle.server_name = config.dflat_db_name;
 
     bclient.preferences = {
         .teamname = "webscraper",

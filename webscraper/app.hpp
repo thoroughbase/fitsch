@@ -9,11 +9,11 @@
 
 #include "common/product.hpp"
 #include "webscraper/stores.hpp"
-#include "webscraper/database.hpp"
 #include "webscraper/curldriver.hpp"
 #include "webscraper/task.hpp"
 
 #include <buxtehude/buxtehude.hpp>
+#include <dflat/dflat.hpp>
 
 constexpr std::string_view FITSCH_VERSION = "0.0.1";
 constexpr std::time_t DEFAULT_ENTRY_EXPIRY_TIME_SECONDS = 86400 * 2;
@@ -22,8 +22,8 @@ namespace bux = buxtehude;
 
 struct AppConfig
 {
-    std::string mongodb_uri;
-    std::string curl_useragent;
+    std::string dflat_db_name = "dflat";
+    std::string curl_useragent = "Mozilla/5.0";
     std::string bux_path_or_hostname = "localhost";
     std::time_t entry_expiry_time_seconds = DEFAULT_ENTRY_EXPIRY_TIME_SECONDS;
     bux::ConnectionType bux_conn_type = bux::ConnectionType::INTERNET;
@@ -45,9 +45,9 @@ public:
 
     Delegator delegator {16};
     CURLDriver curl_driver;
-    Database database;
     bux::Client bclient;
     AppConfig config;
+    dflat::Handle db_handle { bclient };
 
 private:
     void RetryConnection();
