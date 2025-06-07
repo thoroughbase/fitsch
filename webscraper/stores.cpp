@@ -243,62 +243,54 @@ ProductList TE_ParseProductSearch(std::string_view data, size_t depth)
     }
 
     HTML& html = html_opt.value();
-    Collection<Element> item_listings = html.SearchClass("product-list--list-item",
+    Collection<Element> item_listings = html.SearchClass("WL_DZ",
         Element::BODY, true);
 
     ProductList results(depth);
     results.products.reserve(item_listings.size());
-    Collection<Element> title_c, name_c, image_div_c, image_c, price_c, price_per_c;
+    Collection<Element> name_c, image_c, price_c, price_per_c, buybox_c;
     for (Element e : item_listings) {
-        html.SearchAttr(title_c, "data-auto", "product-tile--title", e, true);
-        html.SearchClass(image_div_c, "product-image__container", e, true);
+        html.SearchClass(name_c, "styled__StyledTitleContainer", e, true);
+        html.SearchClass(image_c, "styled__StyledImage-", e, true);
+        html.SearchClass(price_c, "styled__PriceText-", e, true);
+        html.SearchClass(buybox_c, "styled__StyledBuyBoxContainer", e, true);
 
-        if (!title_c.size() || !image_div_c.size())
-           continue;
-
-        html.SearchTag(name_c, "span", title_c[0]);
-        html.SearchTag(image_c, "img", image_div_c[0]);
-        html.SearchClass(price_c, "beans-price__text", e, true);
-        html.SearchClass(price_per_c, "beans-price__subtext", e, true);
-
-        if (!name_c.size() || !image_c.size() || !price_c.size() || !price_per_c.size())
+        if (!name_c.size() || !image_c.size() || !price_c.size() || !buybox_c.size())
             continue;
 
-        std::string_view relative_url = title_c[0].GetAttrValue("href");
-        std::string_view id = relative_url;
-        id.remove_prefix(relative_url.rfind('/') + 1);
+        html.SearchClass(price_per_c, "styled__Subtext-", buybox_c[0],
+            true);
 
-        std::string_view srcset = image_c[0].GetAttrValue("srcset");
-        srcset.remove_suffix(srcset.size() - srcset.find(' ') - 1);
+        std::string_view id_text = e.GetAttrValue("data-testid");
 
-        std::string_view ppu_view = price_per_c[0].FirstChild().Text();
-        auto end_substr = ppu_view.find(' ');
-        if (end_substr != std::string::npos)
-            ppu_view.remove_suffix(ppu_view.size() - end_substr);
+        std::optional<Price> price
+            = Price::FromString(price_c[0].FirstChild().Text(true));
+        std::optional<PricePU> price_per
+            = PricePU::FromString(price_per_c[0].FirstChild().Text(true));
 
-        std::optional<Price> price = Price::FromString(price_c[0].FirstChild().Text());
         if (!price) {
-            Log(LogLevel::WARNING,
-                "Couldn't parse price string for product #{} (Store: {})\n"
-                "  string: {}",
-                results.products.size(), stores::Tesco.name,
+            Log(LogLevel::WARNING, "Failed to parse price '{}'",
                 price_c[0].FirstChild().Text());
             continue;
         }
 
-        Product product = {
-            .name { name_c[0].FirstChild().Text() },
-            .image_url { srcset },
-            .url = fmt::format("{}{}", stores::Tesco.root_url, relative_url),
-            .id = fmt::format("{}{}", stores::Tesco.prefix, id),
+        if (!price_per) {
+            Log(LogLevel::WARNING, "Failed to parse price per unit '{}'",
+                price_per_c[0].FirstChild().Text());
+            continue;
+        }
+
+        Product product {
+            .name { name_c[0].FirstChild().Text(true) },
+            .image_url { image_c[0].GetAttrValue("src") },
+            .url = fmt::format("{}/products/{}", stores::Tesco.homepage, id_text),
+            .id = fmt::format("{}{}", stores::Tesco.prefix, id_text),
+            .offers = {},
             .item_price = price.value(),
-            .price_per_unit = PricePU::FromString(ppu_view).value_or(PricePU {
-                .price = price.value(),
-                .unit = Unit::Piece
-            }),
             .store = stores::Tesco.id,
-            .timestamp = time(NULL),
-            .full_info = false,
+            .price_per_unit = price_per.value(),
+            .timestamp = std::time(nullptr),
+            .full_info = false
         };
 
         results.products.emplace_back(std::move(product),
