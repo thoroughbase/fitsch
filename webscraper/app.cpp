@@ -150,8 +150,6 @@ static Result TC_GetQueriesDB(TaskContext ctx, App* app,
                 return;
             }
 
-            missing = stores.without(query_info.stores);
-
             auto relevant_ids = std::views::keys(
                 query_info.results | std::views::filter([depth] (auto& pair) {
                     auto& [id, info] = pair;
@@ -161,6 +159,9 @@ static Result TC_GetQueriesDB(TaskContext ctx, App* app,
 
             app->db_handle.GetMany<Product>(PRODUCTS_DATABASE, relevant_ids)
             .if_ok_mut([&] (std::unordered_map<std::string, Product>& results) {
+                if (results.size() == relevant_ids.size())
+                    missing = stores.without(query_info.stores);
+
                 for (auto& [id, product] : results)
                     list.products.emplace_back(std::move(product),
                         query_info.results.at(id));
