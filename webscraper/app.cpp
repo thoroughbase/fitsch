@@ -159,12 +159,13 @@ static Result TC_GetQueriesDB(TaskContext ctx, App* app,
 
             app->db_handle.GetMany<Product>(PRODUCTS_DATABASE, relevant_ids)
             .if_ok_mut([&] (std::unordered_map<std::string, Product>& results) {
-                if (results.size() == relevant_ids.size())
+                if (results.size() == relevant_ids.size()) {
                     missing = stores.without(query_info.stores);
 
-                for (auto& [id, product] : results)
-                    list.products.emplace_back(std::move(product),
-                        query_info.results.at(id));
+                    for (auto& [id, product] : results)
+                        list.products.emplace_back(std::move(product),
+                            query_info.results.at(id));
+                }
             })
             .if_err(DATABASE_GET_FAILED);
         });
