@@ -30,9 +30,9 @@ public:
     std::future<QueryResultsMap> SendQuery(std::string_view query);
 
 private:
-    std::unordered_map<int, RequestInfo> pending_queries;
+    std::unordered_map<unsigned, RequestInfo> pending_queries;
     bux::Client& bclient;
     std::string webscraper_name;
 
-    std::atomic<int> request_id = 0;
+    std::atomic<unsigned> request_id = 0;
 };

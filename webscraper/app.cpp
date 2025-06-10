@@ -55,7 +55,7 @@ static void PrintProduct(const std::vector<Result>& results, App* app,
 
 static void SendQuery(const std::vector<Result>& results, App* app,
     const std::string& dest, const std::string& query_string,
-    StoreSelection stores, int request_id)
+    StoreSelection stores, unsigned request_id)
 {
     ProductList list;
     bool upload = false;
@@ -281,7 +281,7 @@ App::App(AppConfig& cfg_temp) : config(std::move(cfg_temp))
 
     bclient.AddHandler("query", [this] (bux::Client& client, const bux::Message& msg) {
         if (!bux::ValidateJSON(msg.content, validate::QUERY)) return;
-        int request_id = msg.content["request-id"];
+        unsigned request_id = msg.content["request-id"];
         size_t depth = msg.content["depth"];
         auto stores = msg.content["stores"].get<StoreSelection>();
         bool force_refresh = msg.content["force-refresh"];

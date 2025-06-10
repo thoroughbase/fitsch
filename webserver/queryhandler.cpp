@@ -19,7 +19,7 @@ QueryHandler::QueryHandler(bux::Client& bclient, std::string_view webscraper)
             Log(LogLevel::WARNING, "Invalid query-result message received!");
             return;
         }
-        int id = msg.content["request-id"];
+        unsigned id = msg.content["request-id"];
         std::string term = msg.content["term"];
 
         auto iterator = pending_queries.find(id);
