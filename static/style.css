@@ -315,3 +315,21 @@ body h3 {
     width: 22px;
     height: 22px;
 }
+
+#welcome {
+    text-align: center;
+    margin-left: 10%;
+    margin-right: 10%;
+}
+
+#welcome-top {
+    font-weight: 400;
+    font-size: 48px;
+}
+
+#welcome-desc {
+    margin-left: 10%;
+    margin-right: 10%;
+    font-weight: 350;
+    font-size: 28px;
+}
