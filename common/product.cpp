@@ -34,6 +34,7 @@ const std::unordered_map<std::string_view, std::pair<Unit, float>>
   UNIT_CONVERSIONS = {
     { "kg",         { Unit::Kilogrammes, 1 } },
     { "kg drained", { Unit::Kilogrammes, 1 } },   // FIXME: Treated the same for now
+    { "kg dr.wt",   { Unit::Kilogrammes, 1 } },
     { "kne",        { Unit::Kilogrammes, 1 } },
     { "g",          { Unit::Kilogrammes, 1000 } },
     { "100g",       { Unit::Kilogrammes, 10 } },
@@ -286,23 +287,23 @@ std::optional<Offer> Offer::FromString(std::string_view view)
 
 std::string Offer::ToString() const
 {
-	switch (type) {
-	case OfferType::MULTIPLE_FOR_REDUCED_PRICE:
-		return fmt::format("Buy {} for {}", bulk_amount, price.ToString());
-	case OfferType::MULTIPLE_HETEROGENEOUS_FOR_REDUCED_PRICE:
-		return fmt::format("Any {} for {}", bulk_amount, price.ToString());
-	case OfferType::REDUCED_PRICE_ABSOLUTE:
-		return fmt::format("On sale: {}", price.ToString());
-	case OfferType::REDUCED_PRICE_DEDUCTION:
-		return fmt::format("On sale: {} off", price.ToString());
-	case OfferType::REDUCED_PRICE_PERCENTAGE:
-		return fmt::format("On sale: {:.1f}% off",
-			price_reduction_multiplier * 100);
-	default:
-		std::string uppercase = text;
-		uppercase[0] = toupper(text[0]);
-		return uppercase;
-	}
+    switch (type) {
+    case OfferType::MULTIPLE_FOR_REDUCED_PRICE:
+        return fmt::format("Buy {} for {}", bulk_amount, price.ToString());
+    case OfferType::MULTIPLE_HETEROGENEOUS_FOR_REDUCED_PRICE:
+        return fmt::format("Any {} for {}", bulk_amount, price.ToString());
+    case OfferType::REDUCED_PRICE_ABSOLUTE:
+        return fmt::format("On sale: {}", price.ToString());
+    case OfferType::REDUCED_PRICE_DEDUCTION:
+        return fmt::format("On sale: {} off", price.ToString());
+    case OfferType::REDUCED_PRICE_PERCENTAGE:
+        return fmt::format("On sale: {:.1f}% off",
+            price_reduction_multiplier * 100);
+    default:
+        std::string uppercase = text;
+        uppercase[0] = toupper(text[0]);
+        return uppercase;
+    }
 }
 
 // ProductList
