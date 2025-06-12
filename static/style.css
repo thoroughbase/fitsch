@@ -316,7 +316,7 @@ body h3 {
     height: 22px;
 }
 
-#welcome {
+#large-message {
     text-align: center;
     margin-left: 10%;
     margin-right: 10%;
@@ -332,4 +332,9 @@ body h3 {
     margin-right: 10%;
     font-weight: 350;
     font-size: 28px;
+}
+
+#error {
+    font-weight: 400;
+    font-size: 48px;
 }

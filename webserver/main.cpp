@@ -110,7 +110,10 @@ int main()
         std::future_status status = future.wait_for(5s);
 
         if (status == std::future_status::timeout) {
-            return crow::response("Timeout occurred");
+            crow::mustache::context ctx {{
+                { "message", "Error - search timed out" }
+            }};
+            return crow::response(crow::mustache::load("error.html").render(ctx));
         }
 
         QueryResultsMap result_map = future.get();
