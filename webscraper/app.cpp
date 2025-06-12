@@ -234,6 +234,12 @@ std::optional<AppConfig> AppConfig::FromJSONFile(std::string_view path)
             result.entry_expiry_time_seconds = time;
     }
 
+    if (cfg_json.contains("/max-concurrent-transfers"_json_pointer)) {
+        const json& max_transfers = cfg_json["max-concurrent-transfers"];
+        if (max_transfers.is_number())
+            result.max_concurrent_transfers = max_transfers.get<unsigned>();
+    }
+
     return result;
 }
 
@@ -270,7 +276,7 @@ App::App(AppConfig& cfg_temp) : config(std::move(cfg_temp))
         Log(static_cast<LogLevel>(level), "(buxtehude) {}", msg);
     });
 
-    curl_driver.Init(32, config.curl_useragent);
+    curl_driver.Init(config.max_concurrent_transfers, config.curl_useragent);
 
     db_handle.server_name = config.dflat_db_name;
 

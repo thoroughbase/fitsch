@@ -27,6 +27,7 @@ struct AppConfig
     std::string bux_path_or_hostname = "localhost";
     std::time_t entry_expiry_time_seconds = DEFAULT_ENTRY_EXPIRY_TIME_SECONDS;
     bux::ConnectionType bux_conn_type = bux::ConnectionType::INTERNET;
+    unsigned max_concurrent_transfers = 32;
     uint16_t bux_port = bux::DEFAULT_PORT;
 
     static std::optional<AppConfig> FromJSONFile(std::string_view path);
