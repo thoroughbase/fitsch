@@ -61,12 +61,16 @@ static void SendQuery(const std::vector<Result>& results, App* app,
     bool upload = false;
 
     for (const Result& result : results) {
-        if (result.Type() != ResultType::GENERIC_VALID) continue;
-        auto& [queried_website, product_list]
-            = result.Get<std::pair<bool, ProductList>>();
+        if (result.Type() == ResultType::GENERIC_VALID) {
+            auto& [queried_website, product_list]
+                = result.Get<std::pair<bool, ProductList>>();
 
-        list.Add(product_list);
-        if (queried_website) upload = true;
+            list.Add(product_list);
+            if (queried_website) upload = true;
+        } else if (result.Type() == ResultType::GENERIC_ERROR) {
+            auto id = result.Get<StoreID>();
+            stores = stores.without(id);
+        }
     }
 
     std::vector<Product> products = list.AsProductVector();
@@ -115,7 +119,7 @@ static Result TC_DoQuery(TaskContext ctx, App* app, const std::string& query_str
         ExternalTaskHandle handle = ctx.delegator.QueueExtraExternalTask(ctx.group_id);
 
         app->curl_driver.PerformTransfer(url,
-        [handle, store, depth] (auto data, auto url, CURLcode code) {
+        [handle, store, depth, id] (auto data, auto url, CURLcode code) {
             if (code == CURLE_OK) {
                 ProductList list = store->ParseProductSearch(data, depth);
                 handle.Finish({
@@ -123,7 +127,10 @@ static Result TC_DoQuery(TaskContext ctx, App* app, const std::string& query_str
                     new std::pair<bool, ProductList>(true, std::move(list))
                 });
             } else {
-                handle.Finish({ ResultType::GENERIC_ERROR, nullptr });
+                handle.Finish({
+                    ResultType::GENERIC_ERROR,
+                    new StoreID { id }
+                });
             }
         }, request_options);
     }
