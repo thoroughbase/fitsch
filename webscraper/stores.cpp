@@ -248,18 +248,15 @@ ProductList TE_ParseProductSearch(std::string_view data, size_t depth)
 
     ProductList results(depth);
     results.products.reserve(item_listings.size());
-    Collection<Element> name_c, image_c, price_c, price_per_c, buybox_c;
+    Collection<Element> name_c, image_c, price_c, price_per_c;
     for (Element e : item_listings) {
-        html.SearchClass(name_c, "styled__StyledTitleContainer", e, true);
-        html.SearchClass(image_c, "styled__StyledImage-", e, true);
-        html.SearchClass(price_c, "styled__PriceText-", e, true);
-        html.SearchClass(buybox_c, "styled__StyledBuyBoxContainer", e, true);
+        html.SearchClass(name_c, "titleContainer", e, true);
+        html.SearchClass(image_c, "baseImage", e, true);
+        html.SearchClass(price_c, "_priceText", e, true);
+        html.SearchClass(price_per_c, "price__subtext", e, true);
 
-        if (!name_c.size() || !image_c.size() || !price_c.size() || !buybox_c.size())
+        if (!name_c.size() || !image_c.size() || !price_c.size() || !price_per_c.size())
             continue;
-
-        html.SearchClass(price_per_c, "styled__Subtext-", buybox_c[0],
-            true);
 
         std::string_view id_text = e.GetAttrValue("data-testid");
 
