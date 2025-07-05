@@ -333,7 +333,7 @@ std::optional<Product> TE_GetProductAtURL(const HTML& html)
 
     json& graph = root_json_obj["@graph"];
     auto iterator = std::find_if(graph.begin(), graph.end(), [] (const json& j) {
-        return j["@type"].get<std::string>() == "Product";
+        return j["@type"].get<std::string_view>() == "Product";
     });
 
     if (iterator == graph.end()) {
@@ -346,7 +346,7 @@ std::optional<Product> TE_GetProductAtURL(const HTML& html)
 
     unsigned int price = product_info["offers"]["price"].get<float>() * 100;
 
-    const std::string sku = product_info["sku"].get<std::string>();
+    auto sku = product_info["sku"].get<std::string_view>();
 
     Product result = {
         .name = product_info["name"],
@@ -406,17 +406,18 @@ ProductList AL_ParseProductSearch(std::string_view data, size_t depth)
     for (json& item : items) {
         ++current_item;
         try {
-            const std::string brand_name
-                = item["brandName"].is_string() ? item["brandName"] : "";
+            std::string_view brand_name
+                = item["brandName"].is_string()
+                ? item["brandName"].get<std::string_view>() : "";
 
             Product product {
                 .name = fmt::format("{} {}", brand_name,
-                                    item["name"].get<std::string>()),
+                                    item["name"].get<std::string_view>()),
                 .description = {},
                 .url = fmt::format("{}/product/{}", stores::Aldi.root_url,
-                    item["sku"].get<std::string>()),
+                    item["sku"].get<std::string_view>()),
                 .id = fmt::format("{}{}", stores::Aldi.prefix,
-                    item["sku"].get<std::string>()),
+                    item["sku"].get<std::string_view>()),
                 .item_price = Price {
                     Currency::EUR, item["price"]["amount"].get<unsigned>()
                 },
@@ -426,9 +427,7 @@ ProductList AL_ParseProductSearch(std::string_view data, size_t depth)
             };
 
             if (!item["assets"].empty()) {
-                const std::string unescaped_image_url = item["assets"][0]["url"];
-
-                std::string_view product_image_id = unescaped_image_url;
+                auto product_image_id = item["assets"][0]["url"].get<std::string_view>();
                 constexpr size_t suffix_size = std::string_view("\\/{slug}").size();
                 product_image_id.remove_suffix(suffix_size - 1);
                 size_t image_id_start = product_image_id.rfind('/');
@@ -447,7 +446,7 @@ ProductList AL_ParseProductSearch(std::string_view data, size_t depth)
                 && item.contains("/price/comparison"_json_pointer)
                 && item["/price/comparison"_json_pointer].is_number()) {
                 product.price_per_unit
-                    = PricePU::FromString(item["sellingSize"].get<std::string>())
+                    = PricePU::FromString(item["sellingSize"].get<std::string_view>())
                       .value_or(PricePU {
                     .price = product.item_price,
                     .unit = Unit::Piece
