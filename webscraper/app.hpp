@@ -15,6 +15,8 @@
 #include <buxtehude/buxtehude.hpp>
 #include <dflat/dflat.hpp>
 
+#include <tb/tb.h>
+
 constexpr std::string_view FITSCH_VERSION = "0.0.1";
 constexpr std::time_t DEFAULT_ENTRY_EXPIRY_TIME_SECONDS = 86400 * 2;
 
@@ -52,7 +54,7 @@ public:
 
 private:
     void RetryConnection();
-    bux::tb::error<bux::ConnectError> BuxConnect();
+    tb::error<bux::ConnectError> BuxConnect();
 
     std::unordered_map<StoreID, const Store*> stores;
 };

@@ -12,3 +12,4 @@ Libraries:
 - [libevent 2.1.12-stable](https://libevent.org/) - Must be built with thread support
 - [crow](https://github.com/CrowCpp/Crow)
 - [dflat (dna65@thoroughbase)](https://github.com/thoroughbase/dflat)
+- [tb-cpp (dna65@thoroughbase)](https://github.com/thoroughbase/tb-cpp)

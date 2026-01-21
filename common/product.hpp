@@ -11,6 +11,8 @@
 
 #include "common/util.hpp"
 
+#include <tb/tb.h>
+
 using nlohmann::json;
 
 enum class StoreID

@@ -16,7 +16,7 @@ constexpr auto PRICE_UNIT_SEPARATORS = std::to_array<std::string_view>({
     " per ", "/", " "
 });
 
-static_assert(tb::is_sorted(PRICE_UNIT_SEPARATORS, [] (auto& a, auto& b) {
+static_assert(util::is_sorted(PRICE_UNIT_SEPARATORS, [] (auto& a, auto& b) {
     return a.size() >= b.size();
 }), "Price unit separators array must be sorted from longest to shortest");
 

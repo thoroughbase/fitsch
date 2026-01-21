@@ -9,7 +9,6 @@
 
 #include <nlohmann/json.hpp>
 
-#include <buxtehude/tb.hpp>
 #include <buxtehude/validate.hpp>
 
 #include "common/product.hpp"
@@ -374,7 +373,7 @@ void App::GetProductAtURL(StoreID store_id, std::string_view item_url)
     });
 }
 
-bux::tb::error<bux::ConnectError> App::BuxConnect()
+tb::error<bux::ConnectError> App::BuxConnect()
 {
     switch (config.bux_conn_type) {
     case bux::ConnectionType::INTERNET:
@@ -386,5 +385,5 @@ bux::tb::error<bux::ConnectError> App::BuxConnect()
         break;
     }
 
-    return bux::tb::ok;
+    return tb::ok;
 }
