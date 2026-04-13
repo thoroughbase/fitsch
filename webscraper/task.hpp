@@ -1,133 +1,234 @@
 #pragma once
 
-#include <functional>
-#include <queue>
-#include <unordered_map>
 #include <vector>
-#include <mutex>
 #include <atomic>
 #include <span>
 #include <thread>
 #include <type_traits>
 #include <memory>
 
+#include <tb/tb.h>
 
-struct TaskContext;
+// Fresh task groups are made by calling Delegator::NewTaskGroup() - if successful
+// (i.e. a task group is available), this returns a GroupHandle.
+//
+// A hard limit TaskGroup::MAX_TASKS is imposed on the number of tasks that can be
+// created within one TaskGroup - exceeding this limit is illegal and throws a
+// runtime_error.
+//
+// A result callback should always be set before queuing any tasks.
+// External tasks must not complete before at least one attempt to call QueueTasks,
+// with their handles passed in to the function. ExternalTaskHandle::PushResult must
+// be called before the handle goes out of scope.
+//
+// When queuing tasks for the first time, the Delegator will attempt to push all of them
+// directly into the task queue. QueueTask() will return a QueueFullError if this fails.
+//
+// When reattempting to queue tasks, the is_reattempt parameter should be set to true.
+// Ad-hoc tasks are stored in the TaskGroup and an attempt to push them into the queue
+// will be made when a Worker completes a task in the TaskGroup. Ad-hoc QueueTask calls
+// (e.g. inside a Task callback) can never fail - the returned tb::error can safely be
+// ignored.
+//
+// Arguments and results can be allocated using AllocateArg and AllocateResult
+// respectively.
+
+struct ExternalTaskHandle;
+struct GroupHandle;
 struct Result;
-struct ResultContainer;
+struct UnboundResultCallback;
+struct Task;
+struct TaskGroup;
+struct Worker;
+
 class Delegator;
 
-using TaskCallback = std::function<Result(TaskContext)>;
-using ResultCallback = std::function<void(const std::vector<Result>&)>;
+using ResultCallback = tb::func<void, GroupHandle, std::span<Result>>;
+using TaskCallback = tb::func<Result, GroupHandle>;
+using Arena = tb::thread_safe_memory_arena;
 
-using BoundDeleter = std::function<void()>;
-
-enum class ResultType
+struct Result
 {
-    EMPTY, GENERIC_ERROR, GENERIC_VALID, GENERIC_SINGLE, GENERIC_VECTOR
+    enum Type
+    {
+        EMPTY, GENERIC_ERROR, GENERIC_VALID, GENERIC_SINGLE, GENERIC_VECTOR
+    };
+
+    void* data = nullptr;
+    Type type = EMPTY;
+
+    auto GetType() const -> Type;
+
+    template<typename T>
+    auto Get() const -> T& { return *static_cast<T*>(data); }
+
+    constexpr static auto Error() -> Result
+    {
+        return { nullptr, GENERIC_ERROR };
+    }
+};
+
+struct QueueFullError {};
+
+struct GroupHandle
+{
+    TaskGroup* group = nullptr;
+    Delegator* delegator = nullptr;
+
+    void SetResultCallback(UnboundResultCallback&& result_cb) const;
+    auto QueueTasks(std::span<Task> tasks,
+        std::initializer_list<ExternalTaskHandle> externals = {},
+        bool is_reattempt = false) const
+    -> tb::error<QueueFullError>;
+    auto CreateExternalTask() const -> ExternalTaskHandle;
+
+    template<typename T, typename... Args>
+        requires tb::allocator_constructible<T, tb::allocator_type<T>, Args...>
+    auto Allocate(Arena& region, Args&&... args) const -> T*;
+
+    template<typename T, typename... Args>
+    auto Allocate(Arena& region, Args&&... args) const -> T*;
+
+    template<typename T, typename... Args>
+    auto AllocateArg(Args&&... args) const -> T*;
+
+    template<typename T, typename... Args>
+    auto AllocateResult(Args&&... args) const -> T*;
+
+    GroupHandle(Delegator* delegator, TaskGroup* group)
+    : group(group), delegator(delegator) {}
+    GroupHandle() = default;
 };
 
 struct Task
 {
+    Task() = default;
+
     template<typename Callable, typename... Args>
+        requires std::is_invocable_r_v<Result, Callable, GroupHandle, Args...>
     Task(Callable&& cb, Args&& ...args)
-    : task_cb(std::bind(std::forward<Callable>(cb), std::placeholders::_1,
-              std::forward<Args>(args)...)) {}
+    : callback ([args..., cb] (GroupHandle ctx) -> Result {
+        return cb(ctx, args...);
+    }) {}
 
-    TaskCallback task_cb;
-    unsigned group_id;
+    TaskCallback callback;
+    GroupHandle handle;
 };
 
-struct Result
+struct TaskGroup
 {
-public:
-    Result() = default;
+    constexpr static size_t MEMORY_POOL_SIZE = 1024 * 1024;
+    constexpr static size_t MAX_TASKS = 32;
+    constexpr static size_t ARGS_MEMORY = 512;
+    constexpr static size_t EXTRA_TASK_MEMORY = MAX_TASKS * sizeof(Task);
+    constexpr static size_t RESULT_VEC_MEMORY = MAX_TASKS * sizeof(Result);
+    constexpr static uint32_t INVALID_GROUP_ID = std::numeric_limits<uint32_t>::max();
 
-    template<typename T, typename Deleter = std::default_delete<T>>
-    Result(ResultType rt, T* ptr, Deleter&& ubdel = std::default_delete<T>{})
-    : deleter(std::bind(std::forward<Deleter>(ubdel), ptr)), data(ptr), type(rt) {}
-
-    Result(ResultType rt, std::nullptr_t ptr) : type(rt) {}
-
-    Result(const Result&) = delete;
-    Result& operator=(const Result&) = delete;
-
-    Result(Result&& other) noexcept;
-    Result& operator=(Result&& other) noexcept;
-
-    template<typename T>
-    const T& Get() const { return *static_cast<T*>(data); }
-    ResultType Type() const;
-
-    ~Result();
-
-private:
-    BoundDeleter deleter = nullptr;
-    void* data = nullptr;
-    ResultType type = ResultType::EMPTY;
-};
-
-struct ResultsContainer
-{
+    tb::dynamically_allocated_array<std::byte, MEMORY_POOL_SIZE> memory {};
     ResultCallback result_cb;
-    std::vector<Result> results;
-    size_t expecting = 0;
-};
+    Arena result_vec_region  = std::span { memory.begin(), RESULT_VEC_MEMORY },
+          args_region        = std::span { result_vec_region.end(), ARGS_MEMORY },
+          extra_tasks_region = std::span { args_region.end(), EXTRA_TASK_MEMORY },
+          results_region     = std::span { extra_tasks_region.end(), memory.end() };
 
-struct TaskContext
-{
-    Delegator& delegator;
-    unsigned group_id;
-};
+    std::array<std::atomic_flag, MAX_TASKS> extra_tasks_consumed_flags {};
+    tb::fixed_size_vector<Result> results { result_vec_region };
+    tb::fixed_size_vector<Task> extra_tasks { extra_tasks_region };
+    std::atomic<size_t> extra_tasks_available { 0 };
+    std::atomic<size_t> expecting { 0 };
+    std::atomic<uint32_t> group_id { 0 };
+    std::atomic<bool> available { true };
 
-struct UnboundResultCallback
-{
-    template<typename Callable, typename... Args>
-    UnboundResultCallback(Callable&& cb, Args&& ...args)
-    : result_cb(std::bind(std::forward<Callable>(cb), std::placeholders::_1,
-                std::forward<Args>(args)...)) {}
-
-    ResultCallback result_cb;
+    void Reset(bool is_available);
 };
 
 struct ExternalTaskHandle
 {
-public:
-    void Finish(Result&& result) const;
-private:
-    friend Delegator;
-    ExternalTaskHandle(Delegator& delegator, unsigned id);
+    GroupHandle handle;
 
-    Delegator& delegator;
-    unsigned group_id;
+    void PushResult(Result result) const;
 };
+
+template<typename T, typename... Args>
+    requires tb::allocator_constructible<T, tb::allocator_type<T>, Args...>
+auto GroupHandle::Allocate(Arena& region, Args&&... args) const -> T*
+{
+    return region.allocate_object<T>(
+        std::forward<Args>(args)...,
+        tb::allocator_type<T> { region }
+    );
+}
+
+template<typename T, typename... Args>
+auto GroupHandle::Allocate(Arena& region, Args&&... args) const -> T*
+{
+    return region.allocate_object<T>(std::forward<Args>(args)...);
+}
+
+template<typename T, typename... Args>
+auto GroupHandle::AllocateArg(Args&&... args) const -> T*
+{
+    return Allocate<T>(group->args_region, std::forward<Args>(args)...);
+}
+
+template<typename T, typename... Args>
+auto GroupHandle::AllocateResult(Args&&... args) const -> T*
+{
+    return Allocate<T>(group->results_region, std::forward<Args>(args)...);
+}
+
+struct UnboundResultCallback
+{
+    template<typename Callable, typename... Args>
+        requires std::is_invocable_r_v<void, Callable, GroupHandle,
+            std::span<Result>, Args...>
+    UnboundResultCallback(Callable&& cb, Args&&... args)
+    : callback ([args..., cb] (GroupHandle handle, std::span<Result> results) {
+        cb(handle, results, args...);
+    }) {}
+
+    ResultCallback callback;
+};
+
+struct Worker
+{
+    Worker() = default;
+    Worker(Delegator* delegator);
+
+    ~Worker();
+
+    Task current_task;
+    std::thread thread;
+    Delegator* delegator = nullptr;
+    std::atomic<bool> available { true };
+};
+
+struct NoGroupsAvailableError {};
 
 class Delegator
 {
 public:
-    Delegator(int max_tasks);
+    Delegator(unsigned max_concurrent_tasks = 4, unsigned max_task_groups = 32);
 
-    unsigned QueueTasks(UnboundResultCallback&& ub_rcb, std::span<Task> tasks);
-    void QueueExtraTasks(unsigned id, std::span<Task> tasks);
-    ExternalTaskHandle QueueExternalTask(UnboundResultCallback&& ub_rcb);
-    ExternalTaskHandle QueueExtraExternalTask(unsigned id);
+    auto NewTaskGroup() -> tb::result<GroupHandle, NoGroupsAvailableError>;
 
-    void RunNextTask();
+    ~Delegator();
 
 private:
-    void TryRun(unsigned id, std::span<Task> tasks);
-    void ProcessResult(unsigned id, Result&& result);
-
-private:
+    friend Worker;
+    friend GroupHandle;
     friend ExternalTaskHandle;
-    std::queue<Task> task_queue;
-    std::unordered_map<unsigned, ResultsContainer> results;
+    void Wake();
+    void RunNextTasks();
+    auto PushExtraTasks(GroupHandle group, bool return_task = true) -> Task*;
+    void ProcessResult(GroupHandle group, Result result);
+    auto PopNextTask(Task& task) -> tb::error<tb::queue_empty_error>;
 
-    std::mutex task_mutex;
-    std::mutex results_mutex;
-
-    std::atomic<int> running_tasks = 0;
-    int max_concurrent_tasks = 16;
-
-    unsigned current_group_id = 0;
+    tb::mpmc_queue<Task, 128> task_queue;
+    std::vector<TaskGroup> task_groups;
+    tb::dynamically_allocated_array<Worker, std::dynamic_extent> workers;
+    std::thread thread;
+    std::atomic<size_t> wake_up { 0 };
+    std::atomic<uint32_t> next_group_id { 0 };
+    std::atomic<bool> stay_alive { true };
 };

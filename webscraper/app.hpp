@@ -46,11 +46,12 @@ public:
 
     void GetProductAtURL(StoreID store, std::string_view item_url);
 
-    Delegator delegator {16};
+    Delegator delegator;
     CURLDriver curl_driver;
     bux::Client bclient;
     AppConfig config;
     dflat::Handle db_handle { bclient };
+    std::mutex client_mutex;
 
 private:
     void RetryConnection();

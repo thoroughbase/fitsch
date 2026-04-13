@@ -28,17 +28,22 @@ constexpr auto DATABASE_GET_FAILED = [] (dflat::DatabaseError) {
     Log(LogLevel::WARNING, "Failed to get documents from database!");
 };
 
+auto RETRY_TASK = [] (auto) {
+    using namespace std::chrono_literals;
+    std::this_thread::sleep_for(5ms);
+};
+
 // ResultCallbacks
 
-static void PrintProduct(const std::vector<Result>& results, App* app,
-    const std::string& url)
+static void PrintProduct(GroupHandle, std::span<Result> results, App* app,
+    std::string_view url)
 {
     if (results.empty()) {
         Log(LogLevel::WARNING, "No product found at URL {}", url);
         return;
     }
 
-    if (results[0].Type() == ResultType::GENERIC_ERROR) {
+    if (results[0].GetType() == Result::GENERIC_ERROR) {
         Log(LogLevel::WARNING, "Error whilst fetching/parsing product at URL {}", url);
         return;
     }
@@ -50,23 +55,28 @@ static void PrintProduct(const std::vector<Result>& results, App* app,
 
     app->db_handle.Put(PRODUCTS_DATABASE, product.id, product, true)
         .if_err(DATABASE_UPLOAD_FAILED);
+
+    // TODO: Make Product arena-compatible
+    std::destroy_at(&product);
 }
 
-static void SendQuery(const std::vector<Result>& results, App* app,
-    const std::string& dest, const std::string& query_string,
+static void SendQuery(GroupHandle, std::span<Result> results, App* app,
+    std::string_view dest, std::string_view query_string,
     StoreSelection stores, unsigned request_id)
 {
     ProductList list;
     bool upload = false;
 
     for (const Result& result : results) {
-        if (result.Type() == ResultType::GENERIC_VALID) {
-            auto& [queried_website, product_list]
-                = result.Get<std::pair<bool, ProductList>>();
+        if (result.GetType() == Result::GENERIC_VALID) {
+            auto& pair = result.Get<std::pair<bool, ProductList>>();
+            auto& [queried_website, product_list] = pair;
 
             list.Add(product_list);
+            // TODO: Make ProductLists arena-compatible
+            std::destroy_at(&pair);
             if (queried_website) upload = true;
-        } else if (result.Type() == ResultType::GENERIC_ERROR) {
+        } else if (result.GetType() == Result::GENERIC_ERROR) {
             auto id = result.Get<StoreID>();
             stores = stores.without(id);
         }
@@ -74,36 +84,41 @@ static void SendQuery(const std::vector<Result>& results, App* app,
 
     std::vector<Product> products = list.AsProductVector();
 
-    app->bclient.Write({ .dest = dest, .type = "query-result",
-        .content = {
-            { "items", products },
-            { "term", query_string },
-            { "request-id", request_id }
-        }
-    }).if_err([] (bux::WriteError) {
-        Log(LogLevel::WARNING, "Failed to write back query-result - connection closed");
-    });
+    {
+        std::scoped_lock client_lock { app->client_mutex };
+        app->bclient.Write({ .dest { dest }, .type = "query-result",
+            .content = {
+                { "items", products },
+                { "term", query_string },
+                { "request-id", request_id }
+            }
+        }).if_err([] (bux::WriteError) {
+            Log(LogLevel::WARNING,
+                "Failed to write back query-result - connection closed");
+        });
+    }
 
-    if (upload) {
-        Log(LogLevel::DEBUG, "Uploading query {}", query_string);
-        app->db_handle.Put(QUERIES_DATABASE, query_string,
-            list.AsQueryTemplate(query_string, stores), true)
+    if (!upload)
+        return;
+
+    Log(LogLevel::DEBUG, "Uploading query {}", query_string);
+    app->db_handle.Put(QUERIES_DATABASE, query_string,
+        list.AsQueryTemplate(query_string, stores), true)
+        .if_err(DATABASE_UPLOAD_FAILED);
+
+    if (!list.products.empty()) {
+        auto product_pairs = products
+        | std::views::transform([] (const Product& p)
+            -> std::tuple<const std::string&, const Product&> {
+            return { p.id, p };
+        });
+
+        app->db_handle.PutMany<Product>(PRODUCTS_DATABASE, product_pairs, true)
             .if_err(DATABASE_UPLOAD_FAILED);
-
-        if (!list.products.empty()) {
-            auto product_pairs = products
-            | std::views::transform([] (const Product& p)
-                -> std::tuple<const std::string&, const Product&> {
-                return { p.id, p };
-            });
-
-            app->db_handle.PutMany<Product>(PRODUCTS_DATABASE, product_pairs, true)
-                .if_err(DATABASE_UPLOAD_FAILED);
-        }
     }
 }
 
-static Result TC_DoQuery(TaskContext ctx, App* app, const std::string& query_string,
+static Result TC_DoQuery(GroupHandle group, App* app, std::string_view query_string,
     StoreSelection stores, size_t depth)
 {
     for (StoreID id : stores) {
@@ -115,20 +130,23 @@ static Result TC_DoQuery(TaskContext ctx, App* app, const std::string& query_str
         std::string url = store->GetProductSearchURL(query_string);
         CURLOptions request_options = store->GetProductSearchCURLOptions(query_string);
 
-        ExternalTaskHandle handle = ctx.delegator.QueueExtraExternalTask(ctx.group_id);
+        auto transfer_task = group.CreateExternalTask();
+        group.QueueTasks({}, { transfer_task }).ignore_error();
 
         app->curl_driver.PerformTransfer(url,
-        [handle, store, depth, id] (auto data, auto url, CURLcode code) {
+        [transfer_task, store, depth, id, group] (auto data, auto url, CURLcode code) {
             if (code == CURLE_OK) {
-                ProductList list = store->ParseProductSearch(data, depth);
-                handle.Finish({
-                    ResultType::GENERIC_VALID,
-                    new std::pair<bool, ProductList>(true, std::move(list))
+                transfer_task.PushResult({
+                    group.AllocateResult<std::pair<bool, ProductList>>(
+                        true,
+                        store->ParseProductSearch(data, depth)
+                    ),
+                    Result::GENERIC_VALID
                 });
             } else {
-                handle.Finish({
-                    ResultType::GENERIC_ERROR,
-                    new StoreID { id }
+                transfer_task.PushResult({
+                    group.AllocateResult<StoreID>(id),
+                    Result::GENERIC_ERROR
                 });
             }
         }, request_options);
@@ -137,8 +155,8 @@ static Result TC_DoQuery(TaskContext ctx, App* app, const std::string& query_str
     return {};
 }
 
-static Result TC_GetQueriesDB(TaskContext ctx, App* app,
-    const std::string& query_string, StoreSelection stores, size_t depth,
+static Result TC_GetQueriesDB(GroupHandle group, App* app,
+    std::string_view query_string, StoreSelection stores, size_t depth,
     bool force_refresh)
 {
     ProductList list(depth);
@@ -178,14 +196,15 @@ static Result TC_GetQueriesDB(TaskContext ctx, App* app,
     }
 
     if (missing) {
-        ctx.delegator.QueueExtraTasks(ctx.group_id, tb::make_span({
-            Task { TC_DoQuery, app, query_string, missing, depth }
-        }));
+        Task do_query { TC_DoQuery, app, query_string, missing, depth };
+        group.QueueTasks(tb::make_span({ do_query })).ignore_error();
     }
 
     return {
-        ResultType::GENERIC_VALID,
-        new std::pair<bool, ProductList>(false, std::move(list))
+        group.AllocateResult<std::pair<bool, ProductList>>(
+            false, std::move(list)
+        ),
+        Result::GENERIC_VALID
     };
 }
 
@@ -272,6 +291,49 @@ void App::RetryConnection()
     reconnect_thread.detach();
 }
 
+static void Bux_HandleQuery(bux::Client& client, const bux::Message& msg, App* app)
+{
+    if (!bux::ValidateJSON(msg.content, validate::QUERY)) return;
+
+    unsigned request_id = msg.content["request-id"];
+    size_t depth = msg.content["depth"];
+    auto stores = msg.content["stores"].get<StoreSelection>();
+    bool force_refresh = msg.content["force-refresh"];
+
+    for (const json& term_obj : msg.content["terms"]) {
+        GroupHandle group;
+        while (
+            app->delegator.NewTaskGroup()
+            .try_move(group)
+            .if_err(RETRY_TASK)
+            .is_error()
+        ) {}
+
+        std::string_view term {
+            *group.AllocateArg<tb::arena_string>(term_obj.get<std::string_view>())
+        };
+
+        std::string_view message_source {
+            *group.AllocateArg<tb::arena_string>(msg.src)
+        };
+
+        group.SetResultCallback({
+            SendQuery, app, message_source, term, stores, request_id
+        });
+
+        bool reattempt = false;
+        while (group.QueueTasks(
+            tb::make_span({
+                Task { TC_GetQueriesDB, app, term, stores, depth, force_refresh }
+            }),
+            {},
+            reattempt
+        ).if_err(RETRY_TASK).is_error()) {
+            reattempt = true;
+        }
+    }
+}
+
 // App
 
 App::App(AppConfig& cfg_temp) : config(std::move(cfg_temp))
@@ -292,21 +354,7 @@ App::App(AppConfig& cfg_temp) : config(std::move(cfg_temp))
     };
 
     bclient.AddHandler("query", [this] (bux::Client& client, const bux::Message& msg) {
-        if (!bux::ValidateJSON(msg.content, validate::QUERY)) return;
-        unsigned request_id = msg.content["request-id"];
-        size_t depth = msg.content["depth"];
-        auto stores = msg.content["stores"].get<StoreSelection>();
-        bool force_refresh = msg.content["force-refresh"];
-
-        for (const json& j : msg.content["terms"]) {
-            auto term = j.get<std::string>();
-            delegator.QueueTasks(
-                { SendQuery, this, msg.src, term, stores, request_id },
-                tb::make_span({
-                    Task { TC_GetQueriesDB, this, term, stores, depth, force_refresh }
-                })
-            );
-        }
+        Bux_HandleQuery(client, msg, this);
     });
 
     bclient.SetDisconnectHandler([this] (bux::Client& client) {
@@ -344,31 +392,44 @@ void App::GetProductAtURL(StoreID store_id, std::string_view item_url)
         return;
     }
 
-    ExternalTaskHandle handle = delegator.QueueExternalTask({
-        PrintProduct, this, std::string { item_url }
-    });
+    GroupHandle group;
+    while (
+        delegator.NewTaskGroup()
+        .try_move(group)
+        .if_err(RETRY_TASK)
+        .is_error()
+    ) {}
 
-    curl_driver.PerformTransfer(item_url, [handle, store] (auto data, auto url,
-        CURLcode code) {
+    std::string_view url_arg {
+        *group.AllocateArg<tb::arena_string>(item_url)
+    };
+
+    group.SetResultCallback({ PrintProduct, this, url_arg });
+
+    auto transfer_task = group.CreateExternalTask();
+    group.QueueTasks({}, { transfer_task }).ignore_error();
+
+    curl_driver.PerformTransfer(item_url,
+        [group, transfer_task, store] (auto data, auto url, CURLcode code) {
         if (code == CURLE_OK) {
             std::optional<HTML> html = HTML::FromString(data);
             if (!html) {
-                handle.Finish({ ResultType::GENERIC_ERROR, nullptr });
+                transfer_task.PushResult(Result::Error());
                 return;
             }
 
             std::optional<Product> product = store->GetProductAtURL(html.value());
             if (!product) {
-                handle.Finish({ ResultType::GENERIC_ERROR, nullptr });
+                transfer_task.PushResult(Result::Error());
                 return;
             }
 
-            handle.Finish({
-                ResultType::GENERIC_VALID,
-                new Product(std::move(*product))
+            transfer_task.PushResult({
+                group.AllocateResult<Product>(std::move(*product)),
+                Result::GENERIC_VALID
             });
         } else {
-            handle.Finish({ ResultType::GENERIC_ERROR, nullptr });
+            transfer_task.PushResult(Result::Error());
         }
     });
 }
