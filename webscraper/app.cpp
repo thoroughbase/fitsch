@@ -48,47 +48,76 @@ static void PrintProduct(GroupHandle, std::span<Result> results, App* app,
         return;
     }
 
-    auto& product = results[0].Get<Product>();
+    auto& product = results[0].Get<ArenaProduct>();
 
     fmt::print("Product at URL `{}`:\n  {}: {} [{}]\n", url, product.name,
                product.item_price.ToString(), product.price_per_unit.ToString());
 
     app->db_handle.Put(PRODUCTS_DATABASE, product.id, product, true)
         .if_err(DATABASE_UPLOAD_FAILED);
-
-    // TODO: Make Product arena-compatible
-    std::destroy_at(&product);
 }
 
-static void SendQuery(GroupHandle, std::span<Result> results, App* app,
+static void SendQuery(GroupHandle g, std::span<Result> results, App* app,
     std::string_view dest, std::string_view query_string,
     StoreSelection stores, unsigned request_id)
 {
-    ProductList list;
     bool upload = false;
+    json items_to_send = json::array();
+    tb::arena_vector<std::pair<std::string_view, PMRProduct&>> product_pairs {
+        g.group->results_region
+    };
+
+    tb::scoped_guard free_pmr_products = [&product_pairs] () {
+        for (auto& [_, product] : product_pairs) {
+            if (std::holds_alternative<Product>(product))
+                std::destroy_at(&product);
+        }
+    };
+
+    ArenaQueryTemplate qt {
+        .query_string { query_string, g.group->results_region },
+        .stores = stores,
+        .results { g.group->results_region },
+        .timestamp = std::time(nullptr),
+        .depth = SEARCH_DEPTH_INDEFINITE
+    };
 
     for (const Result& result : results) {
-        if (result.GetType() == Result::GENERIC_VALID) {
-            auto& pair = result.Get<std::pair<bool, ProductList>>();
-            auto& [queried_website, product_list] = pair;
+        if (result.GetType() == Result::EMPTY)
+            continue;
 
-            list.Add(product_list);
-            // TODO: Make ProductLists arena-compatible
-            std::destroy_at(&pair);
-            if (queried_website) upload = true;
-        } else if (result.GetType() == Result::GENERIC_ERROR) {
-            auto id = result.Get<StoreID>();
-            stores = stores.without(id);
+        if (result.GetType() != Result::GENERIC_VALID) {
+            stores = stores.without(result.Get<StoreID>());
+            continue;
+        }
+
+        auto& [queried_website, product_list]
+            = result.Get<std::pair<bool, ArenaProductList*>>();
+
+        upload |= queried_website;
+
+        if (product_list == nullptr)
+            continue;
+
+        if (product_list->depth < qt.depth)
+            qt.depth = product_list->depth;
+
+        for (const auto& [product, result_info] : product_list->products) {
+            items_to_send.push_back(product);
+            auto id = std::visit([] (const auto& p) -> std::string_view {
+                return p.id;
+            }, product);
+
+            product_pairs.emplace_back(id, product);
+            qt.results.emplace(id, result_info);
         }
     }
-
-    std::vector<Product> products = list.AsProductVector();
 
     {
         std::scoped_lock client_lock { app->client_mutex };
         app->bclient.Write({ .dest { dest }, .type = "query-result",
             .content = {
-                { "items", products },
+                { "items", std::move(items_to_send) },
                 { "term", query_string },
                 { "request-id", request_id }
             }
@@ -102,18 +131,11 @@ static void SendQuery(GroupHandle, std::span<Result> results, App* app,
         return;
 
     Log(LogLevel::DEBUG, "Uploading query {}", query_string);
-    app->db_handle.Put(QUERIES_DATABASE, query_string,
-        list.AsQueryTemplate(query_string, stores), true)
+    app->db_handle.Put(QUERIES_DATABASE, query_string, qt, true)
         .if_err(DATABASE_UPLOAD_FAILED);
 
-    if (!list.products.empty()) {
-        auto product_pairs = products
-        | std::views::transform([] (const Product& p)
-            -> std::tuple<const std::string&, const Product&> {
-            return { p.id, p };
-        });
-
-        app->db_handle.PutMany<Product>(PRODUCTS_DATABASE, product_pairs, true)
+    if (!product_pairs.empty()) {
+        app->db_handle.PutMany<PMRProduct>(PRODUCTS_DATABASE, product_pairs, true)
             .if_err(DATABASE_UPLOAD_FAILED);
     }
 }
@@ -137,9 +159,11 @@ static Result TC_DoQuery(GroupHandle group, App* app, std::string_view query_str
         [transfer_task, store, depth, id, group] (auto data, auto url, CURLcode code) {
             if (code == CURLE_OK) {
                 transfer_task.PushResult({
-                    group.AllocateResult<std::pair<bool, ProductList>>(
+                    group.AllocateResult<std::pair<bool, ArenaProductList*>>(
                         true,
-                        store->ParseProductSearch(data, depth)
+                        store->ParseProductSearch(
+                            data, group.group->results_region, depth
+                        )
                     ),
                     Result::GENERIC_VALID
                 });
@@ -159,7 +183,10 @@ static Result TC_GetQueriesDB(GroupHandle group, App* app,
     std::string_view query_string, StoreSelection stores, size_t depth,
     bool force_refresh)
 {
-    ProductList list(depth);
+    auto& list = *group.AllocateResult<ArenaProductList>(
+        ArenaProductList::WithArena(group.group->results_region)
+    );
+    list.depth = depth;
     StoreSelection missing = stores;
 
     if (!force_refresh) {
@@ -174,21 +201,30 @@ static Result TC_GetQueriesDB(GroupHandle group, App* app,
                 return;
             }
 
+            size_t ids_count = 0;
             auto relevant_ids = std::views::keys(
-                query_info.results | std::views::filter([depth] (auto& pair) {
+                query_info.results | std::views::filter([depth, &ids_count] (auto& pair) {
                     auto& [id, info] = pair;
+                    ++ids_count;
                     return info.relevance < depth;
                 })
-            ) | tb::range_to<std::vector<std::string_view>>();
+            );
 
             app->db_handle.GetMany<Product>(PRODUCTS_DATABASE, relevant_ids)
             .if_ok_mut([&] (std::unordered_map<std::string, Product>& results) {
-                if (results.size() == relevant_ids.size()) {
-                    missing = stores.without(query_info.stores);
+                if (results.size() != ids_count)
+                    return;
 
-                    for (auto& [id, product] : results)
-                        list.products.emplace_back(std::move(product),
-                            query_info.results.at(id));
+                missing = stores.without(query_info.stores);
+
+                for (auto& [id, product] : results) {
+                    auto& product_copy = *group.AllocateResult<PMRProduct>(
+                        std::move(product)
+                    );
+                    list.products.emplace_back(
+                        product_copy,
+                        query_info.results.at(id)
+                    );
                 }
             })
             .if_err(DATABASE_GET_FAILED);
@@ -201,8 +237,8 @@ static Result TC_GetQueriesDB(GroupHandle group, App* app,
     }
 
     return {
-        group.AllocateResult<std::pair<bool, ProductList>>(
-            false, std::move(list)
+        group.AllocateResult<std::pair<bool, ArenaProductList*>>(
+            false, &list
         ),
         Result::GENERIC_VALID
     };
@@ -418,14 +454,14 @@ void App::GetProductAtURL(StoreID store_id, std::string_view item_url)
                 return;
             }
 
-            std::optional<Product> product = store->GetProductAtURL(html.value());
-            if (!product) {
+            ArenaProduct* product = store->GetProductAtURL(html.value(), group.group->results_region);
+            if (product == nullptr) {
                 transfer_task.PushResult(Result::Error());
                 return;
             }
 
             transfer_task.PushResult({
-                group.AllocateResult<Product>(std::move(*product)),
+                product,
                 Result::GENERIC_VALID
             });
         } else {

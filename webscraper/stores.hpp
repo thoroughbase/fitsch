@@ -14,9 +14,10 @@ struct Store
     std::string_view name, prefix, homepage, root_url;
     Region region;
 
-    ProductList (*ParseProductSearch)(std::string_view, size_t);
+    ArenaProductList* (*ParseProductSearch)(std::string_view,
+        tb::thread_safe_memory_arena& arena, size_t);
     std::string (*GetProductSearchURL)(std::string_view);
-    std::optional<Product> (*GetProductAtURL)(const HTML&);
+    ArenaProduct* (*GetProductAtURL)(const HTML&, tb::thread_safe_memory_arena& arena);
     CURLOptions (*GetProductSearchCURLOptions)(std::string_view);
 };
 
@@ -25,28 +26,32 @@ struct Store
 CURLOptions Default_GetProductSearchCURLOptions(std::string_view query);
 
 // SuperValu
-ProductList SV_ParseProductSearch(std::string_view data,
+ArenaProductList* SV_ParseProductSearch(std::string_view data,
+    tb::thread_safe_memory_arena& arena,
     size_t depth=SEARCH_DEPTH_INDEFINITE);
 std::string SV_GetProductSearchURL(std::string_view query);
-std::optional<Product> SV_GetProductAtURL(const HTML& html);
+ArenaProduct* SV_GetProductAtURL(const HTML& html, tb::thread_safe_memory_arena& arena);
 
 // Tesco
-ProductList TE_ParseProductSearch(std::string_view data,
+ArenaProductList* TE_ParseProductSearch(std::string_view data,
+    tb::thread_safe_memory_arena& arena,
     size_t depth=SEARCH_DEPTH_INDEFINITE);
 std::string TE_GetProductSearchURL(std::string_view query);
-std::optional<Product> TE_GetProductAtURL(const HTML& html);
+ArenaProduct* TE_GetProductAtURL(const HTML& html, tb::thread_safe_memory_arena& arena);
 
 // Dunnes Stores
-ProductList DS_ParseProductSearch(std::string_view data,
+ArenaProductList* DS_ParseProductSearch(std::string_view data,
+    tb::thread_safe_memory_arena& arena,
     size_t depth=SEARCH_DEPTH_INDEFINITE);
 std::string DS_GetProductSearchURL(std::string_view query);
-std::optional<Product> DS_GetProductAtURL(const HTML& html);
+ArenaProduct* DS_GetProductAtURL(const HTML& html, tb::thread_safe_memory_arena& arena);
 
 // Aldi
-ProductList AL_ParseProductSearch(std::string_view data,
+ArenaProductList* AL_ParseProductSearch(std::string_view data,
+    tb::thread_safe_memory_arena& arena,
     size_t depth=SEARCH_DEPTH_INDEFINITE);
 std::string AL_GetProductSearchURL(std::string_view query);
-std::optional<Product> AL_GetProductAtURL(const HTML& html);
+ArenaProduct* AL_GetProductAtURL(const HTML& html, tb::thread_safe_memory_arena& arena);
 CURLOptions AL_GetProductSearchCURLOptions(std::string_view query);
 
 namespace stores

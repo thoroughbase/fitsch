@@ -76,7 +76,8 @@ std::string Price::ToString() const
 }
 
 template<>
-std::optional<tb::match_result<Price>> tb::try_match_single(std::string_view view)
+auto tb::try_match_single(std::string_view view)
+    -> std::optional<tb::match_result<Price>>
 {
     std::string str(view);
 
@@ -142,17 +143,6 @@ Price Price::operator*(float f) const
     return { currency, static_cast<unsigned>(value * f) };
 }
 
-void to_json(json& j, const Price& p)
-{
-    j = { json::array({ p.currency, p.value }) };
-}
-
-void from_json(const json& j, Price& p)
-{
-    p.currency = j[0];
-    p.value = j[1];
-}
-
 // Price per unit
 
 std::string PricePU::ToString() const
@@ -205,78 +195,119 @@ std::partial_ordering PricePU::operator<=>(const PricePU& other) const
     return price <=> other.price;
 }
 
-void to_json(json& j, const PricePU& p)
-{
-    j = json::array({ p.unit, p.price });
-}
-
-void from_json(const json& j, PricePU& p)
-{
-    p.unit = j[0];
-    p.price = j[1];
-}
-
 // Offer
 
-std::optional<Offer> Offer::FromString(std::string_view view)
+template<tb::either<Offer, ArenaOffer> OfferT>
+auto BasicOffer_ToString_Impl(const OfferT& offer) -> std::string
+{
+    switch (offer.type) {
+    using enum OfferType;
+    case MULTIPLE_FOR_REDUCED_PRICE:
+        return fmt::format("Buy {} for {}", offer.bulk_amount, offer.price.ToString());
+    case MULTIPLE_HETEROGENEOUS_FOR_REDUCED_PRICE:
+        return fmt::format("Any {} for {}", offer.bulk_amount, offer.price.ToString());
+    case REDUCED_PRICE_ABSOLUTE:
+        return fmt::format("On sale: {}", offer.price.ToString());
+    case REDUCED_PRICE_DEDUCTION:
+        return fmt::format("On sale: {} off", offer.price.ToString());
+    case REDUCED_PRICE_PERCENTAGE:
+        return fmt::format("On sale: {:.1f}% off",
+            offer.price_reduction_multiplier * 100);
+    default:
+        return offer.text
+        | std::views::transform([idx = size_t {}] (char c) mutable -> char {
+            if (idx++ == 0)
+                return toupper(c);
+            else
+                return c;
+        })
+        | tb::range_to<std::string>();
+    }
+}
+
+template<>
+auto Offer::ToString() const -> std::string
+{
+    return BasicOffer_ToString_Impl(*this);
+}
+
+template<>
+auto ArenaOffer::ToString() const -> std::string
+{
+    return BasicOffer_ToString_Impl(*this);
+}
+
+template<tb::either<Offer, ArenaOffer> OfferT>
+auto BasicOffer_FromString_Impl(std::string_view view,
+    tb::thread_safe_memory_arena* arena) -> std::optional<OfferT>
 {
     auto text = view | std::views::transform(tolower) | tb::range_to<std::string>();
+
+    auto construct_string = [arena] (std::string_view view) {
+        using string_t = decltype(std::declval<OfferT>().text);
+        ([](...){})(arena);
+        if constexpr (std::same_as<OfferT, ArenaOffer>)
+            return string_t { view, *arena };
+        else
+            return string_t { view };
+    };
+
     if (auto x_for_y = tb::try_match<unsigned, Price>(text, "{} for {}")) {
         auto [count, price] = x_for_y->object;
-        return Offer {
-            .text { text },
+        return OfferT {
+            .text = construct_string(text),
             .price = price,
             .bulk_amount = count,
             .type = OfferType::MULTIPLE_FOR_REDUCED_PRICE,
         };
     } else if (auto x_for_y = tb::try_match<unsigned, Price>(text, "buy {} for {}")) {
         auto [count, price] = x_for_y->object;
-        return Offer {
-            .text { text },
+        return OfferT {
+            .text = construct_string(text),
             .price = price,
             .bulk_amount = count,
             .type = OfferType::MULTIPLE_FOR_REDUCED_PRICE,
         };
     } else if (auto any = tb::try_match<unsigned, Price>(text, "any {} for {}")) {
         auto [count, price] = x_for_y->object;
-        return Offer {
-            .text { text },
+        return OfferT {
+            .text = construct_string(text),
             .price = price,
             .bulk_amount = count,
             .type = OfferType::MULTIPLE_HETEROGENEOUS_FOR_REDUCED_PRICE,
         };
     } else if (auto reduced = tb::try_match<Price>(text, "only {}")) {
-        return Offer {
-            .text { text },
+        return OfferT {
+            .text = construct_string(text),
             .price = std::get<Price>(reduced->object),
             .bulk_amount = 1,
             .type = OfferType::REDUCED_PRICE_ABSOLUTE,
             .membership_only = text.find("real rewards") != std::string::npos
         };
     } else if (auto tesco_clubcard = tb::try_match<Price>(text, "{} clubcard price")) {
-        return Offer {
-            .text { text },
+        return OfferT {
+            .text = construct_string(text),
             .price = std::get<Price>(tesco_clubcard->object),
             .bulk_amount = 1,
             .type = OfferType::REDUCED_PRICE_ABSOLUTE,
             .membership_only = true
         };
     } else if (auto save_pc = tb::try_match<float>(text, "save {}%")) {
-        return Offer {
-            .text { text },
+        return OfferT {
+            .text = construct_string(text),
             .type = OfferType::REDUCED_PRICE_PERCENTAGE,
             .price_reduction_multiplier = 1 - (std::get<float>(save_pc->object) * .01f)
         };
     } else if (auto save_amnt = tb::try_match<Price>(text, "save {}")) {
-        return Offer {
-            .text { text },
+        return OfferT {
+            .text = construct_string(text),
             .price = std::get<Price>(save_amnt->object),
             .bulk_amount = 1,
             .type = OfferType::REDUCED_PRICE_DEDUCTION
         };
     } else if (text.starts_with("half price")) {
-        return Offer {
-            .text { text },
+        return OfferT {
+            .text = construct_string(text),
             .type = OfferType::REDUCED_PRICE_PERCENTAGE,
             .price_reduction_multiplier = 0.5f
         };
@@ -285,54 +316,16 @@ std::optional<Offer> Offer::FromString(std::string_view view)
     return std::nullopt;
 }
 
-std::string Offer::ToString() const
+template<>
+auto Offer::FromString(std::string_view view, tb::thread_safe_memory_arena*)
+    -> std::optional<Offer>
 {
-    switch (type) {
-    case OfferType::MULTIPLE_FOR_REDUCED_PRICE:
-        return fmt::format("Buy {} for {}", bulk_amount, price.ToString());
-    case OfferType::MULTIPLE_HETEROGENEOUS_FOR_REDUCED_PRICE:
-        return fmt::format("Any {} for {}", bulk_amount, price.ToString());
-    case OfferType::REDUCED_PRICE_ABSOLUTE:
-        return fmt::format("On sale: {}", price.ToString());
-    case OfferType::REDUCED_PRICE_DEDUCTION:
-        return fmt::format("On sale: {} off", price.ToString());
-    case OfferType::REDUCED_PRICE_PERCENTAGE:
-        return fmt::format("On sale: {:.1f}% off",
-            price_reduction_multiplier * 100);
-    default:
-        std::string uppercase = text;
-        uppercase[0] = toupper(text[0]);
-        return uppercase;
-    }
+    return BasicOffer_FromString_Impl<Offer>(view, nullptr);
 }
 
-// ProductList
-
-ProductList::ProductList(size_t depth) : depth(depth) {}
-
-void ProductList::Add(const ProductList& other)
+template<>
+auto ArenaOffer::FromString(std::string_view view, tb::thread_safe_memory_arena* arena)
+    -> std::optional<ArenaOffer>
 {
-    products.insert(products.end(), other.products.begin(), other.products.end());
-    if (other.depth < depth) depth = other.depth;
-}
-
-QueryTemplate ProductList::AsQueryTemplate(std::string_view querystr,
-                                           StoreSelection ids) const
-{
-    QueryTemplate q_template {
-        .query_string { querystr }, .stores { ids },
-        .timestamp = std::time(nullptr), .depth = depth
-    };
-
-    q_template.results.reserve(products.size());
-
-    for (const auto& [product, relevance] : products)
-        q_template.results.emplace(product.id, relevance);
-
-    return q_template;
-}
-
-std::vector<Product> ProductList::AsProductVector() const
-{
-    return std::views::keys(products) | tb::range_to<std::vector<Product>>();
+    return BasicOffer_FromString_Impl<ArenaOffer>(view, arena);
 }

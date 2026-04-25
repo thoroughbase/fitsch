@@ -6,14 +6,16 @@
 
 // SuperValu-like: See stores.md
 
-std::optional<Product> SVLike_GetProductAtURL(const Store& store, const HTML& html)
+ArenaProduct* SVLike_GetProductAtURL(const Store& store, const HTML& html,
+    tb::thread_safe_memory_arena& arena)
 {
     Collection<Element> metatags = html.SearchTag("meta", Element::HEAD);
 
-    Product result {
-        .store = store.id,
-        .timestamp = std::time(nullptr),
-    };
+    ArenaProduct& result
+        = *arena.allocate_object<ArenaProduct>(ArenaProduct::WithArena(arena));
+
+    result.store = store.id;
+    result.timestamp = std::time(nullptr);
 
     for (Element e : metatags) {
         if (!e.HasAttr("itemprop")) continue;
@@ -34,7 +36,7 @@ std::optional<Product> SVLike_GetProductAtURL(const Store& store, const HTML& ht
         } else if (property == "price") {
             std::optional<Price> price = Price::FromString(content);
             if (!price)
-                return std::nullopt;
+                return nullptr;
             result.item_price = price.value();
         }
     }
@@ -53,7 +55,7 @@ std::optional<Product> SVLike_GetProductAtURL(const Store& store, const HTML& ht
         });
     }
 
-    return result;
+    return &result;
 }
 
 std::string SVLike_GetProductSearchURL(const Store& store, std::string_view query_string)
@@ -68,8 +70,8 @@ std::string SVLike_GetProductSearchURL(const Store& store, std::string_view quer
     return fmt::format("{}/results?q={}&skip=0", store.homepage, buffer);
 }
 
-ProductList SVLike_ParseProductSearch(const Store& store, std::string_view data,
-                                      size_t depth)
+ArenaProductList* SVLike_ParseProductSearch(const Store& store, std::string_view data,
+    tb::thread_safe_memory_arena& arena, size_t depth)
 {
     // TODO: Reimplement reading multiple pages
     std::optional<HTML> html_opt = HTML::FromString(data);
@@ -83,7 +85,9 @@ ProductList SVLike_ParseProductSearch(const Store& store, std::string_view data,
     Collection<Element> item_listings
         = html.SearchClass("ColListing", Element::BODY, true);
 
-    ProductList results(depth);
+    ArenaProductList& results
+        = *arena.allocate_object<ArenaProductList>(ArenaProductList::WithArena(arena));
+    results.depth = depth;
     results.products.reserve(item_listings.size());
 
     Collection<Element> name_c, price_c, price_per_c, image_c, url_c;
@@ -150,25 +154,25 @@ ProductList SVLike_ParseProductSearch(const Store& store, std::string_view data,
                     card_charges[0], true);
         }
 
-        std::vector<Offer> offers_vec;
-        offers_vec.reserve(offers_html.size());
-        for (Element offer : offers_html) {
-            if (std::optional<Offer> opt = Offer::FromString(offer.FirstChild().Text()))
-                offers_vec.emplace_back(std::move(opt.value()));
-        }
+        PMRProduct& pmr_product
+            = *arena.allocate_object<PMRProduct>(ArenaProduct::WithArena(arena));
 
-        Product product {
-            .name { name_text_node.Text() },
-            .image_url { image_c[0].GetAttrValue("src") },
-            .url { url_c[0].GetAttrValue("href") },
-            .id = fmt::format("{}{}", store.prefix, str_id),
-            .offers = std::move(offers_vec),
-            .item_price = price.value(),
-            .store = store.id,
-            .price_per_unit = {},
-            .timestamp = std::time(nullptr),
-            .full_info = false
-        };
+        ArenaProduct& product = std::get<ArenaProduct>(pmr_product);
+
+        product.name = name_text_node.Text();
+        product.image_url = image_c[0].GetAttrValue("src");
+        product.url = url_c[0].GetAttrValue("href");
+        product.id = fmt::format("{}{}", store.prefix, str_id);
+        product.offers.reserve(offers_html.size());
+        for (Element offer : offers_html) {
+            if (auto opt = ArenaOffer::FromString(offer.FirstChild().Text(), &arena))
+                product.offers.emplace_back(std::move(opt.value()));
+        }
+        product.item_price = price.value();
+        product.store = store.id;
+        product.price_per_unit = {};
+        product.timestamp = std::time(nullptr);
+        product.full_info = false;
 
         if (price_per_c.size()) {
             product.price_per_unit
@@ -184,13 +188,15 @@ ProductList SVLike_ParseProductSearch(const Store& store, std::string_view data,
             product.price_per_unit.price = product.item_price;
         }
 
-        results.products.emplace_back(std::move(product),
-            QueryResultInfo { results.products.size() });
+        results.products.emplace_back(
+            pmr_product,
+            QueryResultInfo { results.products.size() }
+        );
 
         if (results.products.size() >= depth) break;
     }
 
-    return results;
+    return &results;
 }
 
 CURLOptions Default_GetProductSearchCURLOptions(std::string_view query)
@@ -200,9 +206,9 @@ CURLOptions Default_GetProductSearchCURLOptions(std::string_view query)
 
 // SuperValu
 
-std::optional<Product> SV_GetProductAtURL(const HTML& html)
+ArenaProduct* SV_GetProductAtURL(const HTML& html, tb::thread_safe_memory_arena& arena)
 {
-    return SVLike_GetProductAtURL(stores::SuperValu, html);
+    return SVLike_GetProductAtURL(stores::SuperValu, html, arena);
 }
 
 std::string SV_GetProductSearchURL(std::string_view query_string)
@@ -210,16 +216,16 @@ std::string SV_GetProductSearchURL(std::string_view query_string)
     return SVLike_GetProductSearchURL(stores::SuperValu, query_string);
 }
 
-ProductList SV_ParseProductSearch(std::string_view data, size_t depth)
+ArenaProductList* SV_ParseProductSearch(std::string_view data, tb::thread_safe_memory_arena& arena, size_t depth)
 {
-    return SVLike_ParseProductSearch(stores::SuperValu, data, depth);
+    return SVLike_ParseProductSearch(stores::SuperValu, data, arena, depth);
 }
 
 // Dunnes Stores
 
-ProductList DS_ParseProductSearch(std::string_view data, size_t depth)
+ArenaProductList* DS_ParseProductSearch(std::string_view data, tb::thread_safe_memory_arena& arena, size_t depth)
 {
-    return SVLike_ParseProductSearch(stores::DunnesStores, data, depth);
+    return SVLike_ParseProductSearch(stores::DunnesStores, data, arena, depth);
 }
 
 std::string DS_GetProductSearchURL(std::string_view query)
@@ -227,14 +233,14 @@ std::string DS_GetProductSearchURL(std::string_view query)
     return SVLike_GetProductSearchURL(stores::DunnesStores, query);
 }
 
-std::optional<Product> DS_GetProductAtURL(const HTML& html)
+ArenaProduct* DS_GetProductAtURL(const HTML& html, tb::thread_safe_memory_arena& arena)
 {
-    return SVLike_GetProductAtURL(stores::DunnesStores, html);
+    return SVLike_GetProductAtURL(stores::DunnesStores, html, arena);
 }
 
 // Tesco
 
-ProductList TE_ParseProductSearch(std::string_view data, size_t depth)
+ArenaProductList* TE_ParseProductSearch(std::string_view data, tb::thread_safe_memory_arena& arena, size_t depth)
 {
     std::optional<HTML> html_opt = HTML::FromString(data);
     if (!html_opt) {
@@ -246,7 +252,9 @@ ProductList TE_ParseProductSearch(std::string_view data, size_t depth)
     Collection<Element> item_listings = html.SearchClass("WL_DZ",
         Element::BODY, true);
 
-    ProductList results(depth);
+    ArenaProductList& results
+        = *arena.allocate_object<ArenaProductList>(ArenaProductList::WithArena(arena));
+    results.depth = depth;
     results.products.reserve(item_listings.size());
     Collection<Element> name_c, image_c, price_c, price_per_c;
     for (Element e : item_listings) {
@@ -277,26 +285,31 @@ ProductList TE_ParseProductSearch(std::string_view data, size_t depth)
             continue;
         }
 
-        Product product {
-            .name { name_c[0].FirstChild().Text(true) },
-            .image_url { image_c[0].GetAttrValue("src") },
-            .url = fmt::format("{}/products/{}", stores::Tesco.homepage, id_text),
-            .id = fmt::format("{}{}", stores::Tesco.prefix, id_text),
-            .offers = {},
-            .item_price = price.value(),
-            .store = stores::Tesco.id,
-            .price_per_unit = price_per.value(),
-            .timestamp = std::time(nullptr),
-            .full_info = false
-        };
+        PMRProduct& pmr_product
+            = *arena.allocate_object<PMRProduct>(ArenaProduct::WithArena(arena));
 
-        results.products.emplace_back(std::move(product),
-            QueryResultInfo { results.products.size() });
+        ArenaProduct& product = std::get<ArenaProduct>(pmr_product);
+
+        product.name = name_c[0].FirstChild().Text(true);
+        product.image_url = image_c[0].GetAttrValue("src");
+        product.url = fmt::format("{}/products/{}", stores::Tesco.homepage, id_text);
+        product.id = fmt::format("{}{}", stores::Tesco.prefix, id_text);
+        product.offers = {};
+        product.item_price = price.value();
+        product.store = stores::Tesco.id;
+        product.price_per_unit = price_per.value();
+        product.timestamp = std::time(nullptr);
+        product.full_info = false;
+
+        results.products.emplace_back(
+            pmr_product,
+            QueryResultInfo { results.products.size() }
+        );
 
         if (results.products.size() >= depth) break;
     }
 
-    return results;
+    return &results;
 }
 
 std::string TE_GetProductSearchURL(std::string_view query)
@@ -311,7 +324,7 @@ std::string TE_GetProductSearchURL(std::string_view query)
     return fmt::format("{}/search?query={}", stores::Tesco.homepage, buffer);
 }
 
-std::optional<Product> TE_GetProductAtURL(const HTML& html)
+ArenaProduct* TE_GetProductAtURL(const HTML& html, tb::thread_safe_memory_arena& arena)
 {
     Collection<Element> product_json = html.SearchAttr("type", "application/ld+json",
         Element::HEAD, false);
@@ -348,17 +361,18 @@ std::optional<Product> TE_GetProductAtURL(const HTML& html)
 
     auto sku = product_info["sku"].get<std::string_view>();
 
-    Product result = {
-        .name = product_info["name"],
-        .description = product_info["description"],
-        .image_url = product_info["image"][0],
-        .url = fmt::format("{}/products/{}", stores::Tesco.homepage, sku),
-        .id = fmt::format("{}{}", stores::Tesco.prefix, sku),
-        .item_price = Price { Currency::EUR, price },
-        .store = stores::Tesco.id,
-        .timestamp = std::time(nullptr),
-        .full_info = true
-    };
+    ArenaProduct& result
+        = *arena.allocate_object<ArenaProduct>(ArenaProduct::WithArena(arena));
+
+    result.name = product_info["name"];
+    result.description = product_info["description"];
+    result.image_url = product_info["image"][0];
+    result.url = fmt::format("{}/products/{}", stores::Tesco.homepage, sku);
+    result.id = fmt::format("{}{}", stores::Tesco.prefix, sku);
+    result.item_price = Price { Currency::EUR, price };
+    result.store = stores::Tesco.id;
+    result.timestamp = std::time(nullptr);
+    result.full_info = true;
 
     Collection<Element> priceper = html.SearchClass("ddsweb-price__subtext",
         Element::BODY, true);
@@ -377,12 +391,12 @@ std::optional<Product> TE_GetProductAtURL(const HTML& html)
         });
     }
 
-    return result;
+    return &result;
 }
 
 // Aldi
 
-ProductList AL_ParseProductSearch(std::string_view data, size_t depth)
+ArenaProductList* AL_ParseProductSearch(std::string_view data, tb::thread_safe_memory_arena& arena, size_t depth)
 {
     json json_obj;
     try {
@@ -400,7 +414,9 @@ ProductList AL_ParseProductSearch(std::string_view data, size_t depth)
           "GB%20Fallback%20Image%203-no%20text";
 
     json& items = json_obj["data"];
-    ProductList results;
+    auto& results
+        = *arena.allocate_object<ArenaProductList>(ArenaProductList::WithArena(arena));
+    results.depth = depth;
     results.products.reserve(items.size());
     size_t current_item = 0;
     for (json& item : items) {
@@ -410,21 +426,24 @@ ProductList AL_ParseProductSearch(std::string_view data, size_t depth)
                 = item["brandName"].is_string()
                 ? item["brandName"].get<std::string_view>() : "";
 
-            Product product {
-                .name = fmt::format("{} {}", brand_name,
-                                    item["name"].get<std::string_view>()),
-                .description = {},
-                .url = fmt::format("{}/product/{}", stores::Aldi.root_url,
-                    item["sku"].get<std::string_view>()),
-                .id = fmt::format("{}{}", stores::Aldi.prefix,
-                    item["sku"].get<std::string_view>()),
-                .item_price = Price {
-                    Currency::EUR, item["price"]["amount"].get<unsigned>()
-                },
-                .store = stores::Aldi.id,
-                .timestamp = std::time(nullptr),
-                .full_info = false
+            auto& pmr_product
+                = *arena.allocate_object<PMRProduct>(ArenaProduct::WithArena(arena));
+
+            auto& product = std::get<ArenaProduct>(pmr_product);
+
+            product.name = fmt::format("{} {}", brand_name,
+                                     item["name"].get<std::string_view>()),
+            product.description = {};
+            product.url = fmt::format("{}/product/{}", stores::Aldi.root_url,
+                 item["sku"].get<std::string_view>());
+            product.id = fmt::format("{}{}", stores::Aldi.prefix,
+                 item["sku"].get<std::string_view>());
+            product.item_price = Price {
+                 Currency::EUR, item["price"]["amount"].get<unsigned>()
             };
+            product.store = stores::Aldi.id;
+            product.timestamp = std::time(nullptr);
+            product.full_info = false;
 
             if (!item["assets"].empty()) {
                 auto product_image_id = item["assets"][0]["url"].get<std::string_view>();
@@ -460,8 +479,11 @@ ProductList AL_ParseProductSearch(std::string_view data, size_t depth)
                 product.price_per_unit.price = product.item_price;
             }
 
-            results.products.emplace_back(std::move(product),
-                QueryResultInfo { results.products.size() });
+            results.products.emplace_back(
+                pmr_product,
+                QueryResultInfo { results.products.size() }
+            );
+
             if (results.products.size() >= depth)
                 break;
         } catch (const json::exception& e) {
@@ -470,7 +492,7 @@ ProductList AL_ParseProductSearch(std::string_view data, size_t depth)
         }
     }
 
-    return results;
+    return &results;
 }
 
 std::string AL_GetProductSearchURL(std::string_view query)
@@ -489,7 +511,7 @@ std::string AL_GetProductSearchURL(std::string_view query)
     );
 }
 
-std::optional<Product> AL_GetProductAtURL(const HTML& html)
+ArenaProduct* AL_GetProductAtURL(const HTML& html, tb::thread_safe_memory_arena& arena)
 {
     // TODO: Implement
     return {};
