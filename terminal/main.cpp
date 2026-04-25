@@ -53,7 +53,7 @@ int main()
 
     server.UnixServer(".fitsch_bux").if_err([&] (bux::ListenError e) {
         Log(LogLevel::SEVERE, "Failed to start buxtehude UNIX server: {}\n", e.What());
-        if (e.type != bux::ListenErrorType::BIND_ERROR) {
+        if (e.type != bux::ListenError::BIND_ERROR) {
             quit_error();
         }
     });
