@@ -30,7 +30,7 @@ $(FITSCH_TERMINAL_TARGET): $(FITSCH_TERMINAL_OBJECTS)
 # Webserver building
 
 FITSCH_WEBSERVER_TARGET := fitsch-webserver
-FITSCH_WEBSERVER_SOURCE := $(wildcard webserver/*.cpp common/product.cpp)
+FITSCH_WEBSERVER_SOURCE := $(wildcard webserver/*.cpp common/product.cpp common/util.cpp)
 FITSCH_WEBSERVER_OBJECTS := $(FITSCH_WEBSERVER_SOURCE:%.cpp=$(BUILD_DIR)/%.o)
 FITSCH_WEBSERVER_DEPENDENCIES := $(FITSCH_WEBSERVER_OBJECTS:%.o=%.d)
 FITSCH_WEBSERVER_LDFLAGS := -lbuxtehude -lfmt -lcurl -rpath /usr/local/lib

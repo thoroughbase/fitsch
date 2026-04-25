@@ -1,152 +1,243 @@
 #include "webscraper/task.hpp"
 
 #include <thread>
-#include <utility>
 
-#include "common/util.hpp"
+#include <tb/tb.h>
 
 // Result
 
-Result::Result(Result&& other) noexcept : deleter(std::move(other.deleter)),
-    type(other.type)
-{
-    data = std::exchange(other.data, nullptr);
-}
-
-Result& Result::operator=(Result&& other) noexcept
-{
-    type = other.type;
-    data = std::exchange(other.data, nullptr);
-    deleter = std::move(other.deleter);
-
-    return *this;
-}
-
-ResultType Result::Type() const { return type; }
-
-Result::~Result() { if (deleter && data) deleter(); }
+auto Result::GetType() const -> Type { return type; }
 
 // ExternalTaskHandle
 
-ExternalTaskHandle::ExternalTaskHandle(Delegator& d, unsigned gid)
-    : delegator(d), group_id(gid) {}
-
-void ExternalTaskHandle::Finish(Result&& result) const
+void ExternalTaskHandle::PushResult(Result result) const
 {
-    delegator.ProcessResult(group_id, std::move(result));
+    handle.delegator->PushExtraTasks(handle, false);
+    handle.delegator->ProcessResult(handle, result);
+}
+
+// TaskGroup
+
+void TaskGroup::Reset(bool is_available)
+{
+    results.clear();
+    result_cb.reset();
+    args_region.reset();
+    extra_tasks_region.reset();
+    for (std::atomic_flag& flag : extra_tasks_consumed_flags)
+        flag.clear(std::memory_order_relaxed);
+    results_region.reset();
+    expecting.store(0, std::memory_order_relaxed);
+    extra_tasks_available.store(0, std::memory_order_relaxed);
+    available.store(is_available, std::memory_order_release);
+}
+
+// Worker
+
+Worker::Worker(Delegator* d) : delegator(d)
+{
+    thread = std::thread([this] () {
+        while (delegator->stay_alive.load(std::memory_order_relaxed)) {
+            available.wait(true, std::memory_order_acquire);
+
+            if (!delegator->stay_alive.load(std::memory_order_relaxed)) return;
+
+            Task* next_task = nullptr;
+            do {
+                if (next_task != nullptr)
+                    current_task = *next_task;
+
+                Result result = current_task.callback(current_task.handle);
+                next_task = delegator->PushExtraTasks(current_task.handle);
+
+                delegator->ProcessResult(
+                    current_task.handle,
+                    result
+                );
+            } while (next_task != nullptr
+                || delegator->PopNextTask(current_task).is_ok());
+
+            available.store(true, std::memory_order_release);
+            delegator->Wake();
+        }
+    });
+}
+
+Worker::~Worker()
+{
+    available.store(false, std::memory_order_relaxed);
+    available.notify_one();
+    thread.join();
+}
+
+// GroupHandle
+
+void GroupHandle::SetResultCallback(UnboundResultCallback&& result_cb) const
+{
+    group->result_cb = result_cb.callback;
+}
+
+auto GroupHandle::QueueTasks(std::span<Task> tasks,
+    std::initializer_list<ExternalTaskHandle> externals, bool is_reattempt) const
+-> tb::error<QueueFullError>
+{
+    tb::scoped_guard wake = [this] { delegator->Wake(); };
+
+    size_t old_expecting;
+    if (is_reattempt) {
+        old_expecting = group->expecting.load(std::memory_order_relaxed);
+    } else {
+        old_expecting = group->expecting.fetch_add(
+            tasks.size() + externals.size(),
+            std::memory_order_relaxed
+        );
+
+        if (old_expecting + tasks.size() + externals.size() > TaskGroup::MAX_TASKS)
+            throw std::runtime_error { "Task limit exceeded" };
+    }
+
+    bool push_extra_tasks = !is_reattempt && old_expecting != 0 && tasks.size() > 0;
+
+    for (Task& task : tasks) {
+        task.handle = *this;
+        if (push_extra_tasks)
+            group->extra_tasks.push_back(task);
+    }
+
+    if (push_extra_tasks) {
+        group->extra_tasks_available.fetch_add(tasks.size(), std::memory_order_release);
+        return tb::ok;
+    }
+
+    if (delegator->task_queue.try_push_many(tasks).is_error())
+        return QueueFullError {};
+
+    return tb::ok;
+}
+
+auto GroupHandle::CreateExternalTask() const -> ExternalTaskHandle
+{
+    return ExternalTaskHandle { *this };
 }
 
 // Delegator
 
-Delegator::Delegator(int max_tasks) : max_concurrent_tasks(max_tasks) {}
-
-unsigned Delegator::QueueTasks(UnboundResultCallback&& ub_rcb, std::span<Task> tasks)
+Delegator::Delegator(unsigned max_concurrent_tasks, unsigned max_task_groups)
+: task_groups(max_task_groups)
 {
-    std::lock_guard<std::mutex> tasks_guard(task_mutex);
-    std::lock_guard<std::mutex> results_guard(results_mutex);
+    workers.emplace_all(max_concurrent_tasks, this);
+    thread = std::thread([this] {
+        while (stay_alive) {
+            if (wake_up.load(std::memory_order_relaxed) == 0)
+                wake_up.wait(0, std::memory_order_acquire);
 
-    ++current_group_id;
+            if (!stay_alive) return;
 
-    auto [iterator, success] = results.emplace(current_group_id, ResultsContainer {
-        .result_cb = std::move(ub_rcb.result_cb),
-        .results = {},
-        .expecting = tasks.size()
+            RunNextTasks();
+            wake_up.fetch_sub(1, std::memory_order_relaxed);
+        }
+    });
+}
+
+auto Delegator::NewTaskGroup() -> tb::result<GroupHandle, NoGroupsAvailableError>
+{
+    Wake();
+
+    auto group = std::ranges::find_if(task_groups, [] (TaskGroup& g) {
+        return g.available.exchange(false, std::memory_order_relaxed);
     });
 
-    auto& [key, container_ref] = *iterator;
+    if (group == task_groups.end())
+        return NoGroupsAvailableError {};
 
-    container_ref.results.reserve(tasks.size());
+    uint32_t new_id = next_group_id.fetch_add(1, std::memory_order_relaxed);
+    if (new_id == TaskGroup::INVALID_GROUP_ID)
+        new_id = next_group_id.fetch_add(1, std::memory_order_relaxed);
 
-    TryRun(current_group_id, tasks);
-    return current_group_id;
+    group->group_id.store(new_id, std::memory_order_relaxed);
+
+    return GroupHandle { this, &(*group) };
 }
 
-void Delegator::QueueExtraTasks(unsigned id, std::span<Task> tasks)
+void Delegator::Wake()
 {
-    std::lock_guard<std::mutex> guard(task_mutex);
-
-    auto& [key, container_ref] = *(results.find(id));
-    container_ref.expecting += tasks.size();
-    TryRun(id, tasks);
+    if (wake_up.fetch_add(1, std::memory_order_relaxed) == 0)
+        wake_up.notify_one();
 }
 
-void Delegator::RunNextTask()
+void Delegator::RunNextTasks()
 {
-    std::lock_guard<std::mutex> tasks_guard(task_mutex);
-    std::lock_guard<std::mutex> results_guard(results_mutex);
+    std::span<Worker> workers_view = workers.view();
+    while (true) {
+        auto free_worker = std::ranges::find_if(workers_view, [] (Worker& w) {
+            return w.available.load(std::memory_order_acquire);
+        });
 
-    if (task_queue.size()) {
-        Task& task = task_queue.front();
-        TryRun(task.group_id, tb::make_span({ std::move(task) }));
-        task_queue.pop();
+        if (free_worker == workers_view.end())
+            return;
+
+        if (PopNextTask(free_worker->current_task).is_error())
+            return;
+
+        free_worker->available.store(false, std::memory_order_release);
+        free_worker->available.notify_one();
     }
 }
 
-void Delegator::TryRun(unsigned id, std::span<Task> tasks)
+auto Delegator::PushExtraTasks(GroupHandle handle, bool return_task) -> Task*
 {
-    for (Task& task : tasks) {
-        task.group_id = id;
-        if (running_tasks >= max_concurrent_tasks) {
-            task_queue.emplace(std::move(task));
-            return;
+    TaskGroup* group = handle.group;
+
+    Task* next_task = nullptr;
+    size_t extra_task_size = group->extra_tasks_available.load(std::memory_order_acquire);
+    for (size_t i = 0; i < extra_task_size; ++i) {
+        std::atomic_flag& is_consumed = group->extra_tasks_consumed_flags[i];
+
+        if (is_consumed.test_and_set(std::memory_order_acquire) == true)
+            continue;
+
+        Task& selected_task = group->extra_tasks.view()[i];
+        if (return_task && next_task == nullptr) {
+            next_task = &selected_task;
+            continue;
         }
 
-        ++running_tasks;
-
-        std::thread thread([this] (Task&& task) {
-            Result result = task.task_cb(TaskContext {
-                .delegator = *this,
-                .group_id = task.group_id
-            });
-            ProcessResult(task.group_id, std::move(result));
-
-            --running_tasks;
-            RunNextTask();
-        }, std::move(task));
-
-        thread.detach();
+        if (task_queue.try_push(selected_task).is_error())
+            is_consumed.clear();
     }
+
+    return next_task;
 }
 
-ExternalTaskHandle Delegator::QueueExternalTask(UnboundResultCallback&& ub_rcb)
+void Delegator::ProcessResult(GroupHandle handle, Result result)
 {
-    std::lock_guard<std::mutex> results_guard(results_mutex);
+    TaskGroup* group = handle.group;
+    uint32_t current_id = group->group_id.load(std::memory_order_acquire);
 
-    ++current_group_id;
+    size_t old_result_size = group->results.push_back(result);
+    size_t old_expecting = group->expecting.load(std::memory_order_acquire);
 
-    results.emplace(current_group_id, ResultsContainer {
-        .result_cb = std::move(ub_rcb.result_cb),
-        .results = {},
-        .expecting = 1
-    });
+    if (old_result_size + 1 < old_expecting)
+        return;
 
-    return { *this, current_group_id };
+    if (group->group_id.compare_exchange_strong(
+        current_id, TaskGroup::INVALID_GROUP_ID,
+        std::memory_order_release, std::memory_order_acquire
+    ) == false)
+        return;
+
+    group->result_cb(handle, group->results.view());
+    group->Reset(true);
 }
 
-ExternalTaskHandle Delegator::QueueExtraExternalTask(unsigned id)
+auto Delegator::PopNextTask(Task& task) -> tb::error<tb::queue_empty_error>
 {
-    std::lock_guard<std::mutex> results_guard(results_mutex);
-
-    auto& [key, container_ref] = *(results.find(id));
-    ++container_ref.expecting;
-
-    return { *this, id };
+    return task_queue.try_pop(task);
 }
 
-void Delegator::ProcessResult(unsigned group_id, Result&& result)
+Delegator::~Delegator()
 {
-    std::lock_guard<std::mutex> results_guard(results_mutex);
-
-    auto& [id, container] = *(results.find(group_id));
-    std::vector<Result>& result_vec = container.results;
-
-    result_vec.emplace_back(std::move(result));
-
-    if (result_vec.size() >= container.expecting) {
-        std::erase_if(result_vec, [] (Result& result) {
-            return result.Type() == ResultType::EMPTY;
-        });
-        container.result_cb(result_vec);
-        results.erase(id);
-    }
+    stay_alive.store(false, std::memory_order_relaxed);
+    Wake();
+    thread.join();
 }

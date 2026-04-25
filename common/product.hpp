@@ -46,10 +46,6 @@ struct Price
     unsigned value = 0;
 };
 
-// Price struct is serialised as a tuple of numerical values
-void to_json(json& j, const Price& p);
-void from_json(const json& j, Price& p);
-
 struct PricePU
 {
     std::string ToString() const;
@@ -60,10 +56,6 @@ struct PricePU
     Price price { Currency::EUR, 0 };
     Unit unit = Unit::None;
 };
-
-// Price per unit struct is serialised as a tuple of unit & price tuple
-void to_json(json& j, const PricePU& p);
-void from_json(const json& j, PricePU& p);
 
 using StoreSelection = tb::enum_selection<StoreID>;
 
@@ -79,9 +71,10 @@ enum class OfferType
     MEMBERSHIP_DEAL_ONLY
 };
 
-struct Offer
+template<typename AATypes>
+struct BasicOffer
 {
-    std::string text;
+    AATypes::string text;
     Price price;
     size_t bulk_amount = 0;
     std::time_t expiry;
@@ -89,25 +82,76 @@ struct Offer
     bool membership_only = false;
     float price_reduction_multiplier = 1;
 
-    static std::optional<Offer> FromString(std::string_view text);
-    std::string ToString() const;
+    static auto FromString(std::string_view text,
+        tb::thread_safe_memory_arena* arena = nullptr) -> std::optional<BasicOffer>;
+    auto ToString() const -> std::string;
+
+    template<typename T = AATypes> requires
+        (std::same_as<T, AATypes> && T::arena_type_set)
+    static auto WithArena(tb::thread_safe_memory_arena& arena) -> BasicOffer
+    {
+        return {
+            .text { arena }
+        };
+    }
 };
+
+using Offer = BasicOffer<tb::default_aa_types>;
+using ArenaOffer = BasicOffer<tb::arena_aa_types>;
+
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Offer, text, price, bulk_amount, expiry, type,
     membership_only, price_reduction_multiplier);
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ArenaOffer, text, price, bulk_amount, expiry, type,
+    membership_only, price_reduction_multiplier);
 
-struct Product
+template<>
+auto Offer::FromString(std::string_view, tb::thread_safe_memory_arena*)
+    -> std::optional<Offer>;
+
+template<>
+auto ArenaOffer::FromString(std::string_view, tb::thread_safe_memory_arena*)
+    -> std::optional<ArenaOffer>;
+
+template<>
+auto Offer::ToString() const -> std::string;
+
+template<>
+auto ArenaOffer::ToString() const -> std::string;
+
+template<typename AATypes>
+struct BasicProduct
 {
-    std::string name, description, image_url, url, id;
-    std::vector<Offer> offers;
+    AATypes::string name, description, image_url, url, id;
+    AATypes::template vector<BasicOffer<AATypes>> offers;
     Price item_price;
     PricePU price_per_unit; // Price per KG, L, etc.
     StoreID store;
     std::time_t timestamp;
 
     bool full_info;
+
+    template<typename T = AATypes> requires
+        (std::same_as<T, AATypes> && T::arena_type_set)
+    static auto WithArena(tb::thread_safe_memory_arena& arena) -> BasicProduct
+    {
+        return {
+            .name { arena },
+            .description { arena },
+            .image_url { arena },
+            .url { arena },
+            .id { arena },
+            .offers { arena }
+        };
+    }
 };
+
+using Product = BasicProduct<tb::default_aa_types>;
+using ArenaProduct = BasicProduct<tb::arena_aa_types>;
+
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Product, name, offers, description, image_url, url,
     id, item_price, price_per_unit, store, timestamp, full_info);
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ArenaProduct, name, offers, description, image_url,
+    url, id, item_price, price_per_unit, store, timestamp, full_info);
 
 struct QueryResultInfo
 {
@@ -116,29 +160,54 @@ struct QueryResultInfo
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(QueryResultInfo, relevance);
 
 // Database representation of queries - Product IDs + extra query info
-struct QueryTemplate
+template<typename AATypes>
+struct BasicQueryTemplate
 {
-    std::string query_string;
+    AATypes::string query_string;
     StoreSelection stores;
-    std::unordered_map<std::string, QueryResultInfo> results;
+    AATypes::template unordered_map<typename AATypes::string, QueryResultInfo> results;
     std::time_t timestamp;
     size_t depth;
+
+    template<typename T = AATypes> requires
+        (std::same_as<T, AATypes> && T::arena_type_set)
+    static auto WithArena(tb::thread_safe_memory_arena& arena) -> BasicQueryTemplate
+    {
+        return {
+            .query_string { arena },
+            .results { arena }
+        };
+    }
 };
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(QueryTemplate, query_string, stores, results,
-    timestamp, depth);
 
-constexpr size_t SEARCH_DEPTH_INDEFINITE = -1;
+using QueryTemplate = BasicQueryTemplate<tb::default_aa_types>;
+using ArenaQueryTemplate = BasicQueryTemplate<tb::arena_aa_types>;
 
-struct ProductList
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(QueryTemplate, query_string,
+    stores, results, timestamp, depth);
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ArenaQueryTemplate, query_string,
+    stores, results, timestamp, depth);
+
+constexpr size_t SEARCH_DEPTH_INDEFINITE = std::numeric_limits<size_t>::max();
+
+using PMRProduct = std::variant<Product, ArenaProduct>;
+using SearchResult = std::pair<PMRProduct&, QueryResultInfo>;
+
+template<typename AATypes>
+struct BasicProductList
 {
-    ProductList(size_t depth = SEARCH_DEPTH_INDEFINITE);
+    AATypes::template vector<SearchResult> products;
+    size_t depth = SEARCH_DEPTH_INDEFINITE;
 
-    void Add(const ProductList& other);
-
-    QueryTemplate AsQueryTemplate(std::string_view querystr,
-                                  StoreSelection ids) const;
-    std::vector<Product> AsProductVector() const;
-
-    std::vector<std::pair<Product, QueryResultInfo>> products;
-    size_t depth;
+    template<typename T = AATypes> requires
+        (std::same_as<T, AATypes> && T::arena_type_set)
+    static auto WithArena(tb::thread_safe_memory_arena& arena) -> BasicProductList
+    {
+        return {
+            .products { arena }
+        };
+    }
 };
+
+using ProductList = BasicProductList<tb::default_aa_types>;
+using ArenaProductList = BasicProductList<tb::arena_aa_types>;
