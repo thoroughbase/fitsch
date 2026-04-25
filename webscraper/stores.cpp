@@ -30,8 +30,8 @@ ArenaProduct* SVLike_GetProductAtURL(const Store& store, const HTML& html,
         } else if (property == "description") {
             result.description = content;
         } else if (property == "sku") {
-            result.id = fmt::format("{}{}", store.prefix, content);
-            result.url = fmt::format("{}/product/{}", store.homepage,
+            result.id = std::format("{}{}", store.prefix, content);
+            result.url = std::format("{}/product/{}", store.homepage,
                                      content);
         } else if (property == "price") {
             std::optional<Price> price = Price::FromString(content);
@@ -67,7 +67,7 @@ std::string SVLike_GetProductSearchURL(const Store& store, std::string_view quer
     }
 
     tb::scoped_guard free_buffer = [buffer] { curl_free(buffer); };
-    return fmt::format("{}/results?q={}&skip=0", store.homepage, buffer);
+    return std::format("{}/results?q={}&skip=0", store.homepage, buffer);
 }
 
 ArenaProductList* SVLike_ParseProductSearch(const Store& store, std::string_view data,
@@ -162,7 +162,7 @@ ArenaProductList* SVLike_ParseProductSearch(const Store& store, std::string_view
         product.name = name_text_node.Text();
         product.image_url = image_c[0].GetAttrValue("src");
         product.url = url_c[0].GetAttrValue("href");
-        product.id = fmt::format("{}{}", store.prefix, str_id);
+        product.id = std::format("{}{}", store.prefix, str_id);
         product.offers.reserve(offers_html.size());
         for (Element offer : offers_html) {
             if (auto opt = ArenaOffer::FromString(offer.FirstChild().Text(), &arena))
@@ -292,8 +292,8 @@ ArenaProductList* TE_ParseProductSearch(std::string_view data, tb::thread_safe_m
 
         product.name = name_c[0].FirstChild().Text(true);
         product.image_url = image_c[0].GetAttrValue("src");
-        product.url = fmt::format("{}/products/{}", stores::Tesco.homepage, id_text);
-        product.id = fmt::format("{}{}", stores::Tesco.prefix, id_text);
+        product.url = std::format("{}/products/{}", stores::Tesco.homepage, id_text);
+        product.id = std::format("{}{}", stores::Tesco.prefix, id_text);
         product.offers = {};
         product.item_price = price.value();
         product.store = stores::Tesco.id;
@@ -321,7 +321,7 @@ std::string TE_GetProductSearchURL(std::string_view query)
     }
 
     tb::scoped_guard free_buffer = [buffer] { curl_free(buffer); };
-    return fmt::format("{}/search?query={}", stores::Tesco.homepage, buffer);
+    return std::format("{}/search?query={}", stores::Tesco.homepage, buffer);
 }
 
 ArenaProduct* TE_GetProductAtURL(const HTML& html, tb::thread_safe_memory_arena& arena)
@@ -367,8 +367,8 @@ ArenaProduct* TE_GetProductAtURL(const HTML& html, tb::thread_safe_memory_arena&
     result.name = product_info["name"];
     result.description = product_info["description"];
     result.image_url = product_info["image"][0];
-    result.url = fmt::format("{}/products/{}", stores::Tesco.homepage, sku);
-    result.id = fmt::format("{}{}", stores::Tesco.prefix, sku);
+    result.url = std::format("{}/products/{}", stores::Tesco.homepage, sku);
+    result.id = std::format("{}{}", stores::Tesco.prefix, sku);
     result.item_price = Price { Currency::EUR, price };
     result.store = stores::Tesco.id;
     result.timestamp = std::time(nullptr);
@@ -431,12 +431,12 @@ ArenaProductList* AL_ParseProductSearch(std::string_view data, tb::thread_safe_m
 
             auto& product = std::get<ArenaProduct>(pmr_product);
 
-            product.name = fmt::format("{} {}", brand_name,
+            product.name = std::format("{} {}", brand_name,
                                      item["name"].get<std::string_view>()),
             product.description = {};
-            product.url = fmt::format("{}/product/{}", stores::Aldi.root_url,
+            product.url = std::format("{}/product/{}", stores::Aldi.root_url,
                  item["sku"].get<std::string_view>());
-            product.id = fmt::format("{}{}", stores::Aldi.prefix,
+            product.id = std::format("{}{}", stores::Aldi.prefix,
                  item["sku"].get<std::string_view>());
             product.item_price = Price {
                  Currency::EUR, item["price"]["amount"].get<unsigned>()
@@ -452,7 +452,7 @@ ArenaProductList* AL_ParseProductSearch(std::string_view data, tb::thread_safe_m
                 size_t image_id_start = product_image_id.rfind('/');
                 product_image_id.remove_prefix(image_id_start + 1);
 
-                product.image_url = fmt::format("{}/{}", BASE_IMAGE_URL,
+                product.image_url = std::format("{}/{}", BASE_IMAGE_URL,
                     product_image_id);
             } else {
                 product.image_url = FALLBACK_IMAGE_URL;
@@ -505,7 +505,7 @@ std::string AL_GetProductSearchURL(std::string_view query)
 
     tb::scoped_guard free_buffer = [buffer] { curl_free(buffer); };
 
-    return fmt::format(
+    return std::format(
         "https://api.aldi.ie/v3/product-search?&q={}&limit=30&sort=relevance",
         buffer
     );

@@ -1,7 +1,6 @@
 #include <buxtehude/buxtehude.hpp>
 #include <crow.h>
 #include <curl/curl.h>
-#include <fmt/core.h>
 #include <nlohmann/json.hpp>
 
 #include "common/util.hpp"

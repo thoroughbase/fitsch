@@ -4,9 +4,6 @@
 #include <cstdlib>
 #include <ranges>
 
-#include <fmt/format.h>
-#include <fmt/core.h>
-
 #include <nlohmann/json.hpp>
 
 #include <buxtehude/validate.hpp>
@@ -50,7 +47,7 @@ static void PrintProduct(GroupHandle, std::span<Result> results, App* app,
 
     auto& product = results[0].Get<ArenaProduct>();
 
-    fmt::print("Product at URL `{}`:\n  {}: {} [{}]\n", url, product.name,
+    tb::print("Product at URL `{}`:\n  {}: {} [{}]\n", url, product.name,
                product.item_price.ToString(), product.price_per_unit.ToString());
 
     app->db_handle.Put(PRODUCTS_DATABASE, product.id, product, true)

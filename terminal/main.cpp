@@ -8,8 +8,6 @@
 #include <dflat/dflat.hpp>
 
 #include <nlohmann/json.hpp>
-#include <fmt/core.h>
-
 #include "common/validate.hpp"
 #include "common/product.hpp"
 #include "common/util.hpp"
@@ -73,11 +71,11 @@ int main()
 
     terminal.AddHandler("query-result", [] (bux::Client& cl, const bux::Message& m) {
         if (!bux::ValidateJSON(m.content, validate::QUERY_RESULT)) return;
-        fmt::print("Query results ({}):\n", m.content["term"].get<std::string>());
+        tb::print("Query results ({}):\n", m.content["term"].get<std::string>());
 
         for (const json& j : m.content["items"]) {
             if (!j.contains("name")) continue;
-            fmt::print("  {}\n", j["name"].get<std::string>());
+            tb::print("  {}\n", j["name"].get<std::string>());
         }
     });
 

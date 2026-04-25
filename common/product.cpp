@@ -203,15 +203,15 @@ auto BasicOffer_ToString_Impl(const OfferT& offer) -> std::string
     switch (offer.type) {
     using enum OfferType;
     case MULTIPLE_FOR_REDUCED_PRICE:
-        return fmt::format("Buy {} for {}", offer.bulk_amount, offer.price.ToString());
+        return std::format("Buy {} for {}", offer.bulk_amount, offer.price.ToString());
     case MULTIPLE_HETEROGENEOUS_FOR_REDUCED_PRICE:
-        return fmt::format("Any {} for {}", offer.bulk_amount, offer.price.ToString());
+        return std::format("Any {} for {}", offer.bulk_amount, offer.price.ToString());
     case REDUCED_PRICE_ABSOLUTE:
-        return fmt::format("On sale: {}", offer.price.ToString());
+        return std::format("On sale: {}", offer.price.ToString());
     case REDUCED_PRICE_DEDUCTION:
-        return fmt::format("On sale: {} off", offer.price.ToString());
+        return std::format("On sale: {} off", offer.price.ToString());
     case REDUCED_PRICE_PERCENTAGE:
-        return fmt::format("On sale: {:.1f}% off",
+        return std::format("On sale: {:.1f}% off",
             offer.price_reduction_multiplier * 100);
     default:
         return offer.text

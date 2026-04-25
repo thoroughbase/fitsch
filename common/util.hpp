@@ -6,10 +6,9 @@
 #include <ctime>
 #include <algorithm>
 #include <span>
-#include <nlohmann/json.hpp>
+#include <chrono>
 
-#include <fmt/format.h>
-#include <fmt/chrono.h>
+#include <nlohmann/json.hpp>
 
 #include <tb/tb.h>
 
@@ -20,7 +19,7 @@ enum class LogLevel { DEBUG = 0, INFO = 1, WARNING = 2, SEVERE = 3 };
 constexpr auto MIN_LOG_LEVEL = LogLevel::DEBUG;
 
 template<typename... T>
-void Log(LogLevel l, fmt::format_string<T...> format, T&&... args)
+void Log(LogLevel l, std::format_string<T...> format, T&&... args)
 {
     constexpr static auto LEVEL_NAMES = std::to_array<std::string_view>({
         "DEBUG", "INFO", "WARNING", "SEVERE"
@@ -28,10 +27,14 @@ void Log(LogLevel l, fmt::format_string<T...> format, T&&... args)
 
     if (l < MIN_LOG_LEVEL) return;
 
-    fmt::print("[{:%Y/%m/%d %H:%M:%S} {}] {}\n",
-               fmt::localtime(std::time(nullptr)),
-               LEVEL_NAMES[static_cast<size_t>(l)],
-               fmt::vformat(format, fmt::make_format_args(args...)));
+    tb::print(
+        "[{:%Y/%m/%d %H:%M:%S} {}] {}\n",
+        std::chrono::time_point_cast<std::chrono::seconds>(
+            std::chrono::system_clock::now()
+        ),
+        LEVEL_NAMES[static_cast<size_t>(l)],
+        std::format(format, std::forward<T>(args)...)
+    );
 }
 
 void Abort_AllocFailed();
