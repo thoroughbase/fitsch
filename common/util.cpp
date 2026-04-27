@@ -4,6 +4,13 @@
 
 #include <new>
 
+auto Now() -> TimePoint
+{
+    return std::chrono::time_point_cast<std::chrono::seconds>(
+        Clock::now()
+    );
+}
+
 void Abort_AllocFailed()
 {
     Log(LogLevel::SEVERE, "Failed to allocate memory");
@@ -40,4 +47,19 @@ void from_json(const json& j, PricePU& p)
 {
     p.unit = j[0];
     p.price = j[1];
+}
+
+namespace nlohmann
+{
+
+void to_json(json& j, const std::chrono::seconds& duration)
+{
+    j = duration.count();
+}
+
+void from_json(const json& j, std::chrono::seconds& duration)
+{
+    duration = std::chrono::seconds { j.get<uint64_t>() };
+}
+
 }

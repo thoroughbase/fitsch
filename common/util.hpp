@@ -12,11 +12,16 @@
 
 #include <tb/tb.h>
 
+using Clock = std::chrono::system_clock;
+using TimePoint = std::chrono::time_point<Clock, std::chrono::seconds>;
+
 struct Price;
 struct PricePU;
 
 enum class LogLevel { DEBUG = 0, INFO = 1, WARNING = 2, SEVERE = 3 };
 constexpr auto MIN_LOG_LEVEL = LogLevel::DEBUG;
+
+auto Now() -> TimePoint;
 
 template<typename... T>
 void Log(LogLevel l, std::format_string<T...> format, T&&... args)
@@ -29,9 +34,7 @@ void Log(LogLevel l, std::format_string<T...> format, T&&... args)
 
     tb::print(
         "[{:%Y/%m/%d %H:%M:%S} {}] {}\n",
-        std::chrono::time_point_cast<std::chrono::seconds>(
-            std::chrono::system_clock::now()
-        ),
+        Now(),
         LEVEL_NAMES[static_cast<size_t>(l)],
         std::format(format, std::forward<T>(args)...)
     );
@@ -120,4 +123,28 @@ void from_json(const json& j, tb::arena_unordered_map<K, V>& map)
 	map.clear();
 	for (const auto& [key, value] : j.items())
 		map.emplace(key, value);
+}
+
+namespace nlohmann
+{
+
+template<typename Duration>
+void to_json(json& j, const std::chrono::time_point<Clock, Duration>& timepoint)
+{
+    j = std::chrono::time_point_cast<std::chrono::seconds>(
+        timepoint
+    ).time_since_epoch().count();
+}
+
+template<typename Duration>
+void from_json(const json& j, std::chrono::time_point<Clock, Duration>& timepoint)
+{
+    timepoint = std::chrono::time_point_cast<Duration>(
+        TimePoint { std::chrono::seconds { j.get<uint64_t>() } }
+    );
+}
+
+void to_json(json& j, const std::chrono::seconds& duration);
+void from_json(const json& j, std::chrono::seconds& duration);
+
 }

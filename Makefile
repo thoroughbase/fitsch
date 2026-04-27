@@ -19,7 +19,7 @@ $(FITSCH_WEBSCRAPER_TARGET): $(FITSCH_WEBSCRAPER_OBJECTS)
 # Terminal building
 
 FITSCH_TERMINAL_TARGET := fitsch-term
-FITSCH_TERMINAL_SOURCE := $(wildcard terminal/*.cpp)
+FITSCH_TERMINAL_SOURCE := $(wildcard terminal/*.cpp) common/util.cpp
 FITSCH_TERMINAL_OBJECTS := $(FITSCH_TERMINAL_SOURCE:%.cpp=$(BUILD_DIR)/%.o)
 FITSCH_TERMINAL_DEPENDENCIES := $(FITSCH_TERMINAL_OBJECTS:%.o=%.d)
 FITSCH_TERMINAL_LDFLAGS := -lbuxtehude -rpath /usr/local/lib
@@ -30,7 +30,7 @@ $(FITSCH_TERMINAL_TARGET): $(FITSCH_TERMINAL_OBJECTS)
 # Webserver building
 
 FITSCH_WEBSERVER_TARGET := fitsch-webserver
-FITSCH_WEBSERVER_SOURCE := $(wildcard webserver/*.cpp common/product.cpp common/util.cpp)
+FITSCH_WEBSERVER_SOURCE := $(wildcard webserver/*.cpp) common/product.cpp common/util.cpp
 FITSCH_WEBSERVER_OBJECTS := $(FITSCH_WEBSERVER_SOURCE:%.cpp=$(BUILD_DIR)/%.o)
 FITSCH_WEBSERVER_DEPENDENCIES := $(FITSCH_WEBSERVER_OBJECTS:%.o=%.d)
 FITSCH_WEBSERVER_LDFLAGS := -lbuxtehude -lcurl -rpath /usr/local/lib

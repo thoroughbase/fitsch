@@ -77,7 +77,7 @@ struct BasicOffer
     AATypes::string text;
     Price price;
     size_t bulk_amount = 0;
-    std::time_t expiry;
+    TimePoint expiry;
     OfferType type;
     bool membership_only = false;
     float price_reduction_multiplier = 1;
@@ -126,7 +126,7 @@ struct BasicProduct
     Price item_price;
     PricePU price_per_unit; // Price per KG, L, etc.
     StoreID store;
-    std::time_t timestamp;
+    TimePoint timestamp;
 
     bool full_info;
 
@@ -166,7 +166,7 @@ struct BasicQueryTemplate
     AATypes::string query_string;
     StoreSelection stores;
     AATypes::template unordered_map<typename AATypes::string, QueryResultInfo> results;
-    std::time_t timestamp;
+    TimePoint timestamp;
     size_t depth;
 
     template<typename T = AATypes> requires

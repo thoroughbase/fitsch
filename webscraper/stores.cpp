@@ -15,7 +15,7 @@ ArenaProduct* SVLike_GetProductAtURL(const Store& store, const HTML& html,
         = *arena.allocate_object<ArenaProduct>(ArenaProduct::WithArena(arena));
 
     result.store = store.id;
-    result.timestamp = std::time(nullptr);
+    result.timestamp = Now();
 
     for (Element e : metatags) {
         if (!e.HasAttr("itemprop")) continue;
@@ -171,7 +171,7 @@ ArenaProductList* SVLike_ParseProductSearch(const Store& store, std::string_view
         product.item_price = price.value();
         product.store = store.id;
         product.price_per_unit = {};
-        product.timestamp = std::time(nullptr);
+        product.timestamp = Now();
         product.full_info = false;
 
         if (price_per_c.size()) {
@@ -298,7 +298,7 @@ ArenaProductList* TE_ParseProductSearch(std::string_view data, tb::thread_safe_m
         product.item_price = price.value();
         product.store = stores::Tesco.id;
         product.price_per_unit = price_per.value();
-        product.timestamp = std::time(nullptr);
+        product.timestamp = Now();
         product.full_info = false;
 
         results.products.emplace_back(
@@ -371,7 +371,7 @@ ArenaProduct* TE_GetProductAtURL(const HTML& html, tb::thread_safe_memory_arena&
     result.id = std::format("{}{}", stores::Tesco.prefix, sku);
     result.item_price = Price { Currency::EUR, price };
     result.store = stores::Tesco.id;
-    result.timestamp = std::time(nullptr);
+    result.timestamp = Now();
     result.full_info = true;
 
     Collection<Element> priceper = html.SearchClass("ddsweb-price__subtext",
@@ -442,7 +442,7 @@ ArenaProductList* AL_ParseProductSearch(std::string_view data, tb::thread_safe_m
                  Currency::EUR, item["price"]["amount"].get<unsigned>()
             };
             product.store = stores::Aldi.id;
-            product.timestamp = std::time(nullptr);
+            product.timestamp = Now();
             product.full_info = false;
 
             if (!item["assets"].empty()) {

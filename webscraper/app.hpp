@@ -18,7 +18,7 @@
 #include <tb/tb.h>
 
 constexpr std::string_view FITSCH_VERSION = "0.0.1";
-constexpr std::time_t DEFAULT_ENTRY_EXPIRY_TIME_SECONDS = 86400 * 2;
+constexpr std::chrono::seconds DEFAULT_ENTRY_EXPIRY_TIME = std::chrono::hours { 48 };
 
 namespace bux = buxtehude;
 
@@ -27,7 +27,7 @@ struct AppConfig
     std::string dflat_db_name = "dflat";
     std::string curl_useragent = "Mozilla/5.0";
     std::string bux_path_or_hostname = "localhost";
-    std::time_t entry_expiry_time_seconds = DEFAULT_ENTRY_EXPIRY_TIME_SECONDS;
+    std::chrono::seconds entry_expiry_time = DEFAULT_ENTRY_EXPIRY_TIME;
     bux::ConnectionType bux_conn_type = bux::ConnectionType::INTERNET;
     unsigned max_concurrent_transfers = 32;
     uint16_t bux_port = bux::DEFAULT_PORT;

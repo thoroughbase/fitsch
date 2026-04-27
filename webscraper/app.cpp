@@ -75,7 +75,7 @@ static void SendQuery(GroupHandle g, std::span<Result> results, App* app,
         .query_string { query_string, g.group->results_region },
         .stores = stores,
         .results { g.group->results_region },
-        .timestamp = std::time(nullptr),
+        .timestamp = Now(),
         .depth = SEARCH_DEPTH_INDEFINITE
     };
 
@@ -192,11 +192,9 @@ static Result TC_GetQueriesDB(GroupHandle group, App* app,
             if (e != dflat::DatabaseError::KEY_NOT_FOUND)
                 DATABASE_GET_FAILED(e);
         }).if_ok([&] (const QueryTemplate& query_info) {
-            std::time_t time_elapsed = std::time(nullptr) - query_info.timestamp;
-            if (query_info.depth < depth
-                || time_elapsed > app->config.entry_expiry_time_seconds) {
+            auto time_elapsed = Now() - query_info.timestamp;
+            if (query_info.depth < depth || time_elapsed > app->config.entry_expiry_time)
                 return;
-            }
 
             size_t ids_count = 0;
             auto relevant_ids = std::views::keys(
@@ -289,7 +287,7 @@ std::optional<AppConfig> AppConfig::FromJSONFile(std::string_view path)
     if (cfg_json.contains("/entry-expiry-time-seconds"_json_pointer)) {
         const json& time = cfg_json["entry-expiry-time-seconds"];
         if (time.is_number())
-            result.entry_expiry_time_seconds = time;
+            result.entry_expiry_time = time;
     }
 
     if (cfg_json.contains("/max-concurrent-transfers"_json_pointer)) {
