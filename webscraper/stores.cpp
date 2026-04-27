@@ -364,9 +364,9 @@ ArenaProduct* TE_GetProductAtURL(const HTML& html, tb::thread_safe_memory_arena&
     ArenaProduct& result
         = *arena.allocate_object<ArenaProduct>(ArenaProduct::WithArena(arena));
 
-    result.name = product_info["name"];
-    result.description = product_info["description"];
-    result.image_url = product_info["image"][0];
+    result.name = product_info["name"].get<std::string_view>();
+    result.description = product_info["description"].get<std::string_view>();
+    result.image_url = product_info["image"][0].get<std::string_view>();
     result.url = std::format("{}/products/{}", stores::Tesco.homepage, sku);
     result.id = std::format("{}{}", stores::Tesco.prefix, sku);
     result.item_price = Price { Currency::EUR, price };
