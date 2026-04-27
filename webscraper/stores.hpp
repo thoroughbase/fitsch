@@ -71,7 +71,7 @@ constexpr Store SuperValu =
 
 constexpr Store Tesco = {
     .id = StoreID::TESCO, .name = "Tesco", .prefix = "TE",
-    .homepage = "https://www.tesco.ie/groceries/en-IE",
+    .homepage = "https://www.tesco.ie/shop/en-IE",
     .root_url = "https://www.tesco.ie",
     .region = Region::IE,
     .ParseProductSearch = TE_ParseProductSearch,

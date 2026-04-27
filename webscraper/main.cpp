@@ -29,7 +29,7 @@ int main(int argc, char** argv)
     			 	  	   "product/batchelors-chick-peas-225-g-id-1018033000";
     a.GetProductAtURL(StoreID::SUPERVALU, url);
 
-    std::string_view url2 = "https://www.tesco.ie/groceries/en-IE/products/303007973";
+    std::string_view url2 = "https://www.tesco.ie/shop/en-IE/products/303007973";
     a.GetProductAtURL(StoreID::TESCO, url2);
 
     std::string_view url3
