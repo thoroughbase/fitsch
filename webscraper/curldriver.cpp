@@ -190,7 +190,7 @@ CURLDriver::~CURLDriver()
 void CURLDriver::PerformTransfer(std::string_view url, TransferDoneCallback&& cb,
     const CURLOptions& options)
 {
-    std::lock_guard<std::mutex> guard(container_mutex);
+    std::scoped_lock guard(container_mutex);
 
     PerformTransfer_NoLock(url, std::forward<TransferDoneCallback>(cb), options);
 }
@@ -261,7 +261,7 @@ void CURLDriver::Drive()
     while (event_base_loop(general_context.ebase, EVLOOP_NO_EXIT_ON_EMPTY) == 0) {
         if (general_context.interrupt) break;
 
-        std::lock_guard<std::mutex> guard(container_mutex);
+        std::scoped_lock guard(container_mutex);
         if (CURLMcode error_code = general_context.return_code;
             error_code != CURLM_OK) {
 
