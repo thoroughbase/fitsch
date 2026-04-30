@@ -472,10 +472,7 @@ tb::error<bux::ConnectError> App::BuxConnect()
         return bclient.IPConnect(config.bux_path_or_hostname, config.bux_port);
     case bux::ConnectionType::UNIX:
         return bclient.UnixConnect(config.bux_path_or_hostname);
-    case bux::ConnectionType::INTERNAL:
-        assert(config.bux_conn_type != bux::ConnectionType::INTERNAL);
-        break;
+    default:
+        tb::declare_unreachable();
     }
-
-    return tb::ok;
 }
