@@ -87,7 +87,7 @@ int main()
 
     std::string input;
 
-    while (1) {
+    while (true) {
         std::getline(std::cin, input);
         if (input.empty()) continue;
         if (input == "quit") break;
