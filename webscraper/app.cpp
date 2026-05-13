@@ -348,9 +348,9 @@ static void Bux_HandleQuery(bux::Client& client, const bux::Message& msg, App* a
             *group.AllocateArg<tb::arena_string>(msg.src)
         };
 
-        group.SetResultCallback({
+        group.SetResultCallback(
             SendQuery, app, message_source, term, stores, request_id
-        });
+        );
 
         bool reattempt = false;
         while (group.QueueTasks(
@@ -435,7 +435,7 @@ void App::GetProductAtURL(StoreID store_id, std::string_view item_url)
         *group.AllocateArg<tb::arena_string>(item_url)
     };
 
-    group.SetResultCallback({ PrintProduct, this, url_arg });
+    group.SetResultCallback(PrintProduct, this, url_arg);
 
     auto transfer_task = group.CreateExternalTask();
     group.QueueTasks({}, { transfer_task }).ignore_error();

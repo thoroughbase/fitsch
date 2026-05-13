@@ -72,11 +72,6 @@ Worker::~Worker()
 
 // GroupHandle
 
-void GroupHandle::SetResultCallback(UnboundResultCallback&& result_cb) const
-{
-    group->result_cb = result_cb.callback;
-}
-
 auto GroupHandle::QueueTasks(std::span<Task> tasks,
     std::initializer_list<ExternalTaskHandle> externals, bool is_reattempt) const
 -> tb::error<QueueFullError>

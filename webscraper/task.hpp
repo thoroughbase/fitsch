@@ -36,7 +36,6 @@
 struct ExternalTaskHandle;
 struct GroupHandle;
 struct Result;
-struct UnboundResultCallback;
 struct Task;
 struct TaskGroup;
 struct Worker;
@@ -75,7 +74,11 @@ struct GroupHandle
     TaskGroup* group = nullptr;
     Delegator* delegator = nullptr;
 
-    void SetResultCallback(UnboundResultCallback&& result_cb) const;
+    template<typename Callable, typename... Args>
+        requires std::is_invocable_r_v<void, Callable, GroupHandle,
+            std::span<Result>, Args...>
+    void SetResultCallback(Callable&& cb, Args&&... args) const;
+
     auto QueueTasks(std::span<Task> tasks,
         std::initializer_list<ExternalTaskHandle> externals = {},
         bool is_reattempt = false) const
@@ -149,6 +152,16 @@ struct ExternalTaskHandle
     void PushResult(Result result) const;
 };
 
+template<typename Callable, typename... Args>
+    requires std::is_invocable_r_v<void, Callable, GroupHandle,
+        std::span<Result>, Args...>
+void GroupHandle::SetResultCallback(Callable&& cb, Args&&... args) const
+{
+    group->result_cb = [args..., cb] (GroupHandle handle, std::span<Result> results) {
+        cb(handle, results, args...);
+    };
+}
+
 template<typename T, typename... Args>
     requires tb::allocator_constructible<T, tb::allocator_type<T>, Args...>
 auto GroupHandle::Allocate(Arena& region, Args&&... args) const -> T*
@@ -176,19 +189,6 @@ auto GroupHandle::AllocateResult(Args&&... args) const -> T*
 {
     return Allocate<T>(group->results_region, std::forward<Args>(args)...);
 }
-
-struct UnboundResultCallback
-{
-    template<typename Callable, typename... Args>
-        requires std::is_invocable_r_v<void, Callable, GroupHandle,
-            std::span<Result>, Args...>
-    UnboundResultCallback(Callable&& cb, Args&&... args)
-    : callback ([args..., cb] (GroupHandle handle, std::span<Result> results) {
-        cb(handle, results, args...);
-    }) {}
-
-    ResultCallback callback;
-};
 
 struct Worker
 {
